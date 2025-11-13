@@ -90,7 +90,8 @@ function ensureAdvancedShapeDefs() {
       var self = this
 
       function addWidthHandle() {
-        var h = new mxHandle(state, null, function(bounds) {
+        var h = new mxHandle(state, null, mxVertexHandler.prototype.secondaryHandleImage)
+        h.getPosition = function(bounds) {
           var pts = state.absolutePoints
           var p0 = pts && pts[0]
           var p1 = pts && pts[pts.length - 1]
@@ -105,7 +106,8 @@ function ensureAdvancedShapeDefs() {
           var w = mxUtils.getNumber(state.style, 'width', shapeName === 'flexArrow' ? 10 : 4)
           var off = w / 2
           return new mxPoint(cx + nx * off, cy + ny * off)
-        }, function(bounds, pt) {
+        }
+        h.setPosition = function(bounds, pt) {
           var model = self.graph.getModel()
           model.beginUpdate()
           try {
@@ -126,8 +128,9 @@ function ensureAdvancedShapeDefs() {
             var w = Math.max(1, Math.round(Math.abs(dist) * 2))
             self.graph.setCellStyles('width', String(w), [state.cell])
           } finally { model.endUpdate() }
-        })
+        }
         h.ignoreGrid = true
+        if (h.shape) { h.shape.fill = '#ff0000'; h.shape.stroke = '#ff0000' }
         handles.push(h)
       }
 
@@ -169,31 +172,23 @@ function ensureAdvancedShapeDefs() {
       var list = handles || []
       var st = this.state
       if (st && this.graph.getModel().isVertex(st.cell)) {
-        var h = (window.Graph && Graph.createHandle)
-          ? Graph.createHandle(st, ['strokeWidth'], function(bounds) {
-              var sw = (st.shape && st.shape.strokewidth) || mxUtils.getNumber(st.style, 'strokeWidth', 1)
-              var off = Math.max(8, Math.min(24, sw * 1.5))
-              return new mxPoint(bounds.getCenterX(), bounds.y - off)
-            }, function(bounds, pt) {
-              var d = bounds.y - pt.y
-              st.style['strokeWidth'] = Math.max(1, Math.min(40, Math.round(d)))
-            }, true)
-          : (function() {
-              var hh = new mxHandle(st, null, mxVertexHandler.prototype.secondaryHandleImage)
-              hh.getPosition = function(bounds) {
-                var sw = (st.shape && st.shape.strokewidth) || mxUtils.getNumber(st.style, 'strokeWidth', 1)
-                var off = Math.max(8, Math.min(24, sw * 1.5))
-                return new mxPoint(bounds.getCenterX(), bounds.y - off)
-              }
-              hh.setPosition = function(bounds, pt) {
-                var d = bounds.y - pt.y
-                st.style['strokeWidth'] = Math.max(1, Math.min(40, Math.round(d)))
-              }
-              hh.execute = function() { this.copyStyle('strokeWidth') }
-              hh.ignoreGrid = true
-              return hh
-            })()
-        list.push(h)
+        var hh = new mxHandle(st, null, null)
+        hh.getPosition = function(bounds) {
+          var sw = (st.shape && st.shape.strokewidth) || mxUtils.getNumber(st.style, 'strokeWidth', 1)
+          var off = Math.max(8, Math.min(24, sw * 1.5))
+          return new mxPoint(bounds.getCenterX(), bounds.y - off)
+        }
+        hh.setPosition = function(bounds, pt) {
+          var d = bounds.y - pt.y
+          st.style['strokeWidth'] = Math.max(1, Math.min(40, Math.round(d)))
+        }
+        hh.execute = function() { this.copyStyle('strokeWidth') }
+        hh.ignoreGrid = true
+        if (hh.shape) {
+          hh.shape.fill = '#ff0000'
+          hh.shape.stroke = '#ff0000'
+        }
+        list.push(hh)
       }
       return list
     }
