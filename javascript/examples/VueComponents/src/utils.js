@@ -10,7 +10,28 @@ export function ensureMxClient({ mxClientUrl, mxBasePath, mxImageBasePath } = {}
     if (window.mxClient) {
       if (mxBasePath && !window.mxBasePath) window.mxBasePath = mxBasePath
       if (mxImageBasePath && !window.mxImageBasePath) window.mxImageBasePath = mxImageBasePath
-      return resolve()
+      /**
+       * loadGeIfNeeded
+       * 在 mxClient 已存在时，确保 Grapheditor 扩展 Shapes.js 也已加载
+       */
+      function loadGeIfNeeded() {
+        if (window.Graph && (window.Graph.handleFactory || window.Graph.createHandle)) return resolve()
+        const geRel = new URL('../vendor/ge/Shapes.js', import.meta.url).href
+        const geAbs = '/@fs/Users/alex/temp/mxgraph/javascript/examples/VueComponents/vendor/ge/Shapes.js'
+        const geCandidates = [geRel, geAbs]
+        if (typeof window !== 'undefined' && !window.Graph) window.Graph = {}
+        const tryLoad = (i) => {
+          if (i >= geCandidates.length) return resolve()
+          const ss = document.createElement('script')
+          ss.src = geCandidates[i]
+          ss.async = true
+          ss.onload = () => resolve()
+          ss.onerror = () => { try { document.head.removeChild(ss) } catch (e) {} ; tryLoad(i+1) }
+          document.head.appendChild(ss)
+        }
+        tryLoad(0)
+      }
+      return loadGeIfNeeded()
     }
 
     // 缺省开箱即用路径（组件内置 vendor），并提供绝对路径兜底（/@fs/...）

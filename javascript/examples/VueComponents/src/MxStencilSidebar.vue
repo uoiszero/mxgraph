@@ -155,11 +155,42 @@ function ensureAdvancedShapeDefs() {
           } finally { model.endUpdate() }
         })
         h.ignoreGrid = true
+        h.__role = 'curve'
         handles.push(h)
       }
 
-      if (shapeName === 'flexArrow' || shapeName === 'link') addWidthHandle()
+      // 仅追加曲率控制点；宽度/箭头角度句柄交由 vendor(ge/Shapes.js) 提供
       addCurveHandle()
+
+      // 句柄着色：link 只有厚度 → 红色；flexArrow 厚度红色、角度蓝色
+      if (shapeName === 'link') {
+        for (var i = 0; i < handles.length; i++) {
+          var hi = handles[i]
+          if (hi && hi.shape && hi.__role !== 'curve') {
+            hi.shape.fill = '#ff0000'
+            hi.shape.stroke = '#ff0000'
+          }
+        }
+      } else if (shapeName === 'flexArrow') {
+        // 过滤掉我们新增的曲率句柄，仅对 vendor 句柄着色
+        var vendor = []
+        for (var j = 0; j < handles.length; j++) {
+          if (handles[j] && handles[j].__role !== 'curve') vendor.push(handles[j])
+        }
+        // 期望顺序：每端两个 [宽度, 角度]。仅一端有箭头时长度为2
+        for (var k = 0; k < vendor.length; k++) {
+          var h = vendor[k]
+          if (!h || !h.shape) continue
+          var isWidth = (k % 2 === 0) // 0,2 → 宽度；1,3 → 角度
+          if (isWidth) {
+            h.shape.fill = '#ff0000'
+            h.shape.stroke = '#ff0000'
+          } else {
+            h.shape.fill = '#1677ff'
+            h.shape.stroke = '#1677ff'
+          }
+        }
+      }
       return handles
     }
   }
