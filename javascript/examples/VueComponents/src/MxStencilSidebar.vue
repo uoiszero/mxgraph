@@ -56,19 +56,131 @@ export default {
      */
     async function loadAll() {
       for (const g of groupsState) {
-        await loadStencilSetAndEnumerate(g.url, g.items)
-      }
-      // 若内置路径加载失败（无任何条目），回退到 grapheditor 示例目录
-      const total = groupsState.reduce((n, g) => n + g.items.length, 0)
-      if (total === 0) {
-        const fallbackBase = '/@fs/Users/alex/temp/mxgraph/javascript/examples/grapheditor/www/stencils/'
-        for (const g of groupsState) {
-          const name = g.url.split('/').pop()
-          if (name) {
-            await loadStencilSetAndEnumerate(fallbackBase + name, g.items)
-          }
+        if (g.url) {
+          await loadStencilSetAndEnumerate(g.url, g.items)
         }
       }
+      ensureProgrammaticGroups()
+      populateGeneral(groupsState.find(g => g.key === 'general')?.items)
+      populateMisc(groupsState.find(g => g.key === 'misc')?.items)
+      populateAdvanced(groupsState.find(g => g.key === 'advanced')?.items)
+      // 自动展开第一个非空分组
+      const firstNonEmpty = groupsState.find(g => g.items.length > 0)
+      if (firstNonEmpty && openKey.value !== firstNonEmpty.key) {
+        openKey.value = firstNonEmpty.key
+      }
+      // 对每个空的 stencil 分组做逐级回退：组件绝对路径 -> grapheditor 示例路径
+      const compAbs = '/@fs/Users/alex/temp/mxgraph/javascript/examples/VueComponents/stencils/'
+      const geAbs = '/@fs/Users/alex/temp/mxgraph/javascript/examples/grapheditor/www/stencils/'
+      for (const g of groupsState) {
+        if (!g.url) continue
+        if (g.items.length > 0) continue
+        const name = g.url.split('/').pop()
+        if (!name) continue
+        for (const base of [compAbs, geAbs]) {
+          await loadStencilSetAndEnumerate(base + name, g.items)
+          if (g.items.length > 0) break
+        }
+      }
+      const firstNonEmpty2 = groupsState.find(g => g.items.length > 0)
+      if (firstNonEmpty2) openKey.value = firstNonEmpty2.key
+    }
+
+    function ensureProgrammaticGroups() {
+      const need = [
+        { key: 'general', title: 'General' },
+        { key: 'misc', title: 'Misc' },
+        { key: 'advanced', title: 'Advanced' }
+      ]
+      need.forEach(n => {
+        if (!groupsState.find(g => g.key === n.key)) {
+          groupsState.push({ key: n.key, title: n.title, url: '', items: reactive([]) })
+        }
+      })
+    }
+
+    function styleForItem(it) {
+      if (it.style) return it.style
+      if (it.shapeKey) return 'shape=' + it.shapeKey + ';whiteSpace=wrap;html=1'
+      return 'whiteSpace=wrap;html=1;'
+    }
+
+    function populateGeneral(items) {
+      if (!items) return
+      const push = (label, w, h, style, value='') => items.push({ key: 'general.' + label, label, w, h, style, value })
+      push('Rectangle', 120, 60, 'rounded=0;whiteSpace=wrap;html=1;')
+      push('Rounded Rectangle', 120, 60, 'rounded=1;whiteSpace=wrap;html=1;')
+      push('Text', 40, 20, 'text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;', 'Text')
+      push('Ellipse', 120, 80, 'ellipse;whiteSpace=wrap;html=1;')
+      push('Square', 80, 80, 'whiteSpace=wrap;html=1;aspect=fixed;')
+      push('Circle', 80, 80, 'ellipse;whiteSpace=wrap;html=1;aspect=fixed;')
+      push('Process', 120, 60, 'shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;')
+      push('Diamond', 80, 80, 'rhombus;whiteSpace=wrap;html=1;')
+      push('Parallelogram', 120, 60, 'shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;')
+      push('Hexagon', 120, 80, 'shape=hexagon;perimeter=hexagonPerimeter2;whiteSpace=wrap;html=1;fixedSize=1;')
+      push('Triangle', 60, 80, 'triangle;whiteSpace=wrap;html=1;')
+      push('Cylinder', 60, 80, 'shape=cylinder3;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;')
+      push('Cloud', 120, 80, 'ellipse;shape=cloud;whiteSpace=wrap;html=1;')
+      push('Document', 120, 80, 'shape=document;whiteSpace=wrap;html=1;boundedLbl=1;')
+      push('Internal Storage', 80, 80, 'shape=internalStorage;whiteSpace=wrap;html=1;backgroundOutline=1;')
+      push('Cube', 120, 80, 'shape=cube;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;darkOpacity2=0.1;')
+      push('Step', 120, 80, 'shape=step;perimeter=stepPerimeter;whiteSpace=wrap;html=1;fixedSize=1;')
+      push('Trapezoid', 120, 60, 'shape=trapezoid;perimeter=trapezoidPerimeter;whiteSpace=wrap;html=1;fixedSize=1;')
+      push('Tape', 120, 100, 'shape=tape;whiteSpace=wrap;html=1;')
+      push('Note', 80, 100, 'shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;')
+      push('Card', 80, 100, 'shape=card;whiteSpace=wrap;html=1;')
+      push('Callout', 120, 80, 'shape=callout;whiteSpace=wrap;html=1;perimeter=calloutPerimeter;')
+      push('Actor', 30, 60, 'shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;', 'Actor')
+      push('Or', 60, 80, 'shape=xor;whiteSpace=wrap;html=1;')
+      push('And', 60, 80, 'shape=or;whiteSpace=wrap;html=1;')
+      push('Data Storage', 100, 80, 'shape=dataStorage;whiteSpace=wrap;html=1;fixedSize=1;')
+    }
+
+    function populateMisc(items) {
+      if (!items) return
+      const push = (label, w, h, style, value='') => items.push({ key: 'misc.' + label, label, w, h, style, value })
+      push('Double Rectangle', 120, 80, 'shape=ext;double=1;rounded=0;whiteSpace=wrap;html=1;')
+      push('Double Rounded Rectangle', 120, 80, 'shape=ext;double=1;rounded=1;whiteSpace=wrap;html=1;')
+      push('Double Ellipse', 100, 60, 'ellipse;shape=doubleEllipse;whiteSpace=wrap;html=1;')
+      push('Double Square', 80, 80, 'shape=ext;double=1;whiteSpace=wrap;html=1;aspect=fixed;')
+      push('Double Circle', 80, 80, 'ellipse;shape=doubleEllipse;whiteSpace=wrap;html=1;aspect=fixed;')
+      push('Rectangle Sketch', 120, 60, 'rounded=1;whiteSpace=wrap;html=1;strokeWidth=2;fillWeight=4;hachureGap=8;hachureAngle=45;fillColor=#1ba1e2;sketch=1;')
+      push('Ellipse Sketch', 120, 60, 'ellipse;whiteSpace=wrap;html=1;strokeWidth=2;fillWeight=2;hachureGap=8;fillColor=#990000;fillStyle=dots;sketch=1;')
+      push('Diamond Sketch', 120, 60, 'rhombus;whiteSpace=wrap;html=1;strokeWidth=2;fillWeight=-1;hachureGap=8;fillStyle=cross-hatch;fillColor=#006600;sketch=1;')
+      push('Isometric Cube', 90, 100, 'html=1;whiteSpace=wrap;shape=isoCube2;backgroundOutline=1;isoAngle=15;')
+      push('Isometric Square', 150, 90, 'html=1;whiteSpace=wrap;aspect=fixed;shape=isoRectangle;')
+      push('Curly Bracket', 20, 120, 'shape=curlyBracket;whiteSpace=wrap;html=1;rounded=1;')
+      push('Crossbar', 120, 20, 'shape=crossbar;whiteSpace=wrap;html=1;rounded=1;')
+      push('Image Label', 140, 60, 'label;whiteSpace=wrap;html=1;image=' + (window?.Editor?.prototype?.gearImage || 'images/gear.png') , 'Label')
+    }
+
+    function populateAdvanced(items) {
+      if (!items) return
+      const push = (label, w, h, style, value='') => items.push({ key: 'advanced.' + label, label, w, h, style, value })
+      push('Tape Data', 80, 80, 'shape=tapeData;whiteSpace=wrap;html=1;perimeter=ellipsePerimeter;')
+      push('Manual Input', 80, 80, 'shape=manualInput;whiteSpace=wrap;html=1;')
+      push('Loop Limit', 100, 80, 'shape=loopLimit;whiteSpace=wrap;html=1;')
+      push('Off Page Connector', 80, 80, 'shape=offPageConnector;whiteSpace=wrap;html=1;')
+      push('Delay', 80, 40, 'shape=delay;whiteSpace=wrap;html=1;')
+      push('Display', 80, 40, 'shape=display;whiteSpace=wrap;html=1;')
+      push('Arrow Left', 100, 60, 'shape=singleArrow;direction=west;whiteSpace=wrap;html=1;')
+      push('Arrow Right', 100, 60, 'shape=singleArrow;whiteSpace=wrap;html=1;')
+      push('Arrow Up', 60, 100, 'shape=singleArrow;direction=north;whiteSpace=wrap;html=1;')
+      push('Arrow Down', 60, 100, 'shape=singleArrow;direction=south;whiteSpace=wrap;html=1;')
+      push('Double Arrow', 100, 60, 'shape=doubleArrow;whiteSpace=wrap;html=1;')
+      push('User', 40, 60, 'shape=actor;whiteSpace=wrap;html=1;')
+      push('Cross', 80, 80, 'shape=cross;whiteSpace=wrap;html=1;')
+      push('Corner', 80, 80, 'shape=corner;whiteSpace=wrap;html=1;')
+      push('Tee', 80, 80, 'shape=tee;whiteSpace=wrap;html=1;')
+      push('Data Store', 60, 60, 'shape=datastore;whiteSpace=wrap;html=1;')
+      push('Or Ellipse', 80, 80, 'shape=orEllipse;perimeter=ellipsePerimeter;whiteSpace=wrap;html=1;backgroundOutline=1;')
+      push('Sum Ellipse', 80, 80, 'shape=sumEllipse;perimeter=ellipsePerimeter;whiteSpace=wrap;html=1;backgroundOutline=1;')
+      push('Ellipse H Divider', 80, 80, 'shape=lineEllipse;perimeter=ellipsePerimeter;whiteSpace=wrap;html=1;backgroundOutline=1;')
+      push('Ellipse V Divider', 80, 80, 'shape=lineEllipse;line=vertical;perimeter=ellipsePerimeter;whiteSpace=wrap;html=1;backgroundOutline=1;')
+      push('Sort', 80, 80, 'shape=sortShape;perimeter=rhombusPerimeter;whiteSpace=wrap;html=1;')
+      push('Collate', 80, 80, 'shape=collate;whiteSpace=wrap;html=1;')
+      push('Switch', 60, 60, 'shape=switch;whiteSpace=wrap;html=1;')
+      push('Container', 200, 200, 'swimlane;')
     }
 
     /**
@@ -180,7 +292,7 @@ export default {
         const parent = g.getDefaultParent()
         g.getModel().beginUpdate()
         try {
-          g.insertVertex(parent, null, '', pt.x, pt.y, item.w, item.h, 'shape=' + item.shapeKey + ';whiteSpace=wrap;html=1')
+          g.insertVertex(parent, null, item.value || '', pt.x, pt.y, item.w, item.h, styleForItem(item))
         } finally { g.getModel().endUpdate() }
       }, dragElt, 0, 0, true, true)
     }
@@ -205,7 +317,7 @@ export default {
       const g = thumbGraph
       g.labelsVisible = false
       g.getModel().beginUpdate()
-      try { g.insertVertex(g.getDefaultParent(), null, '', 0, 0, item.w, item.h, 'shape=' + item.shapeKey + ';whiteSpace=wrap;html=1') }
+      try { g.insertVertex(g.getDefaultParent(), null, item.value || '', 0, 0, item.w, item.h, styleForItem(item)) }
       finally { g.getModel().endUpdate() }
       const bounds = g.getGraphBounds()
       const s = Math.max(0.01, Math.floor(Math.min((width - 4) / bounds.width, (height - 4) / bounds.height) * 100) / 100)
