@@ -38,6 +38,9 @@ export function ensureMxClient({ mxClientUrl, mxBasePath, mxImageBasePath } = {}
         const geCandidates = [geRel, geAbs]
         const loadGe = (i) => {
           if (i >= geCandidates.length) return resolve()
+          if (typeof window !== 'undefined' && !window.Graph) {
+            window.Graph = {}
+          }
           const ss = document.createElement('script')
           ss.src = geCandidates[i]
           ss.async = true
