@@ -18,6 +18,35 @@ import { onMounted, reactive, ref, computed, nextTick, inject } from 'vue'
 function ensureAdvancedShapeDefs() {
   if (typeof window === 'undefined' || !window.mxCellRenderer || !window.mxActor) return
   const reg = window.mxCellRenderer.defaultShapes || {}
+  // Link (带体边，细带)
+  if (!reg['link']) {
+    function LinkShape() { mxArrowConnector.apply(this, arguments) }
+    mxUtils.extend(LinkShape, mxArrowConnector)
+    LinkShape.prototype.defaultWidth = 4
+    LinkShape.prototype.getEdgeWidth = function() {
+      return mxUtils.getNumber(this.style, 'width', this.defaultWidth) + Math.max(0, this.strokewidth - 1)
+    }
+    mxCellRenderer.registerShape('link', LinkShape)
+  }
+  // FlexArrow (带体箭头)
+  if (!reg['flexArrow']) {
+    function FlexArrowShape() { mxArrowConnector.apply(this, arguments) }
+    mxUtils.extend(FlexArrowShape, mxArrowConnector)
+    FlexArrowShape.prototype.defaultWidth = 10
+    FlexArrowShape.prototype.defaultArrowWidth = 20
+    FlexArrowShape.prototype.getEdgeWidth = function() {
+      return mxUtils.getNumber(this.style, 'width', this.defaultWidth) + Math.max(0, this.strokewidth - 1)
+    }
+    FlexArrowShape.prototype.getStartArrowWidth = function() {
+      const sw = mxUtils.getNumber(this.style, 'startWidth', this.defaultArrowWidth)
+      return this.getEdgeWidth() + sw
+    }
+    FlexArrowShape.prototype.getEndArrowWidth = function() {
+      const ew = mxUtils.getNumber(this.style, 'endWidth', this.defaultArrowWidth)
+      return this.getEdgeWidth() + ew
+    }
+    mxCellRenderer.registerShape('flexArrow', FlexArrowShape)
+  }
   if (!reg['singleArrow']) {
     function SingleArrowShape() { mxActor.call(this) }
     mxUtils.extend(SingleArrowShape, mxActor)

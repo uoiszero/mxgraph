@@ -4,21 +4,24 @@
     button(@click="resetGraph") 重置
     button(@click="addSample") 添加示例
     button(@click="openEditor") 编辑XML
+    MxEdgeStylePicker(:getGraph="getGraph")
   .workspace
     .sidebar
       MxStencilSidebar(:getGraph="getGraph")
     .canvas
       MxGraphCanvas(@ready="onReady")
+    .inspector
+      MxStyleEditor(:getGraph="getGraph")
   MxEditDialog(:visible="showEditor" :getGraphFn="getGraph" @close="showEditor=false")
 </template>
 
 <script>
 import { ref } from "vue";
-import { MxGraphCanvas, MxStencilSidebar, MxEditDialog } from "../../../VueComponents/index.js";
+import { MxGraphCanvas, MxStencilSidebar, MxEditDialog, MxEdgeStylePicker, MxStyleEditor } from "../../../VueComponents/index.js";
 
 export default {
   name: "MxGraphDemo",
-  components: { MxGraphCanvas, MxStencilSidebar, MxEditDialog },
+  components: { MxGraphCanvas, MxStencilSidebar, MxEditDialog, MxEdgeStylePicker, MxStyleEditor },
   setup() {
     const container = ref(null);
     let graph = null;
@@ -104,6 +107,14 @@ export default {
   flex: 1;
   height: 480px;
   border: 1px dashed #cbd5e1;
+}
+.inspector {
+  width: 320px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px;
+  height: 480px;
+  overflow: auto;
 }
 button {
   padding: 6px 12px;

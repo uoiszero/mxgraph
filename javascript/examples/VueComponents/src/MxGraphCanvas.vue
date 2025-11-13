@@ -76,6 +76,9 @@ export default {
     // 在 setup 同步阶段提供注入，避免运行时调用 provide 产生警告
     provide('getGraph', () => graphRef.value)
     provide('mxGraph', graphRef)
+    if (typeof window !== 'undefined') {
+      window.__lastGraphRef = () => graphRef.value
+    }
 
     onMounted(async () => {
       if (props.autoLoad) {
