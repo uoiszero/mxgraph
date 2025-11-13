@@ -6,12 +6,13 @@ import path from 'node:path'
 const mxSrc = path.resolve(__dirname, '../../src')
 const projectRoot = __dirname
 const stencilsDir = path.resolve(__dirname, '../grapheditor/www/stencils')
+const componentsDir = path.resolve(__dirname, '../VueComponents')
 
 export default defineConfig({
   plugins: [vue()],
   server: {
     fs: {
-      allow: [mxSrc, projectRoot, stencilsDir]
+      allow: [mxSrc, projectRoot, stencilsDir, componentsDir]
     }
   },
   resolve: {
