@@ -77,6 +77,127 @@ function ensureAdvancedShapeDefs() {
     }
     mxCellRenderer.registerShape('doubleArrow', DoubleArrowShape)
   }
+
+  if (!window.__mx_custom_handles_installed && window.mxHandle && window.mxEdgeHandler) {
+    window.__mx_custom_handles_installed = true
+    var origEdgeHandles = mxEdgeHandler.prototype.createCustomHandles
+    mxEdgeHandler.prototype.createCustomHandles = function() {
+      var res = origEdgeHandles ? origEdgeHandles.apply(this, arguments) : null
+      var handles = res || []
+      var state = this.state
+      var style = state.style || {}
+      var shapeName = style.shape || ''
+      var self = this
+
+      function addWidthHandle() {
+        var h = new mxHandle(state, null, function(bounds) {
+          var pts = state.absolutePoints
+          var p0 = pts && pts[0]
+          var p1 = pts && pts[pts.length - 1]
+          if (!p0 || !p1) return new mxPoint(state.getCenterX(), state.getCenterY())
+          var cx = (p0.x + p1.x) / 2
+          var cy = (p0.y + p1.y) / 2
+          var dx = p1.x - p0.x
+          var dy = p1.y - p0.y
+          var len = Math.sqrt(dx * dx + dy * dy) || 1
+          var nx = -dy / len
+          var ny = dx / len
+          var w = mxUtils.getNumber(state.style, 'width', shapeName === 'flexArrow' ? 10 : 4)
+          var off = w / 2
+          return new mxPoint(cx + nx * off, cy + ny * off)
+        }, function(bounds, pt) {
+          var model = self.graph.getModel()
+          model.beginUpdate()
+          try {
+            var pts = state.absolutePoints
+            var p0 = pts && pts[0]
+            var p1 = pts && pts[pts.length - 1]
+            if (!p0 || !p1) return
+            var cx = (p0.x + p1.x) / 2
+            var cy = (p0.y + p1.y) / 2
+            var dx = p1.x - p0.x
+            var dy = p1.y - p0.y
+            var len = Math.sqrt(dx * dx + dy * dy) || 1
+            var nx = -dy / len
+            var ny = dx / len
+            var vx = pt.x - cx
+            var vy = pt.y - cy
+            var dist = vx * nx + vy * ny
+            var w = Math.max(1, Math.round(Math.abs(dist) * 2))
+            self.graph.setCellStyles('width', String(w), [state.cell])
+          } finally { model.endUpdate() }
+        })
+        h.ignoreGrid = true
+        handles.push(h)
+      }
+
+      function addCurveHandle() {
+        var h = new mxHandle(state, null, function(bounds) {
+          var pts = state.absolutePoints
+          var p0 = pts && pts[0]
+          var p1 = pts && pts[pts.length - 1]
+          if (!p0 || !p1) return new mxPoint(state.getCenterX(), state.getCenterY())
+          var cx = (p0.x + p1.x) / 2
+          var cy = (p0.y + p1.y) / 2
+          return new mxPoint(cx, cy)
+        }, function(bounds, pt) {
+          var model = self.graph.getModel()
+          model.beginUpdate()
+          try {
+            var geo = model.getGeometry(state.cell)
+            geo = geo ? geo.clone() : new mxGeometry()
+            geo.points = [new mxPoint(pt.x, pt.y)]
+            model.setGeometry(state.cell, geo)
+            self.graph.setCellStyles(mxConstants.STYLE_CURVED, '1', [state.cell])
+          } finally { model.endUpdate() }
+        })
+        h.ignoreGrid = true
+        handles.push(h)
+      }
+
+      if (shapeName === 'flexArrow' || shapeName === 'link') addWidthHandle()
+      addCurveHandle()
+      return handles
+    }
+  }
+
+  if (!window.__mx_vertex_thickness_handle_installed && window.mxHandle && window.mxVertexHandler) {
+    window.__mx_vertex_thickness_handle_installed = true
+    var origVertexHandles = mxVertexHandler.prototype.createCustomHandles
+    mxVertexHandler.prototype.createCustomHandles = function() {
+      var handles = origVertexHandles ? origVertexHandles.apply(this, arguments) : null
+      var list = handles || []
+      var st = this.state
+      if (st && this.graph.getModel().isVertex(st.cell)) {
+        var h = (window.Graph && Graph.createHandle)
+          ? Graph.createHandle(st, ['strokeWidth'], function(bounds) {
+              var sw = (st.shape && st.shape.strokewidth) || mxUtils.getNumber(st.style, 'strokeWidth', 1)
+              var off = Math.max(8, Math.min(24, sw * 1.5))
+              return new mxPoint(bounds.getCenterX(), bounds.y - off)
+            }, function(bounds, pt) {
+              var d = bounds.y - pt.y
+              st.style['strokeWidth'] = Math.max(1, Math.min(40, Math.round(d)))
+            }, true)
+          : (function() {
+              var hh = new mxHandle(st, null, mxVertexHandler.prototype.secondaryHandleImage)
+              hh.getPosition = function(bounds) {
+                var sw = (st.shape && st.shape.strokewidth) || mxUtils.getNumber(st.style, 'strokeWidth', 1)
+                var off = Math.max(8, Math.min(24, sw * 1.5))
+                return new mxPoint(bounds.getCenterX(), bounds.y - off)
+              }
+              hh.setPosition = function(bounds, pt) {
+                var d = bounds.y - pt.y
+                st.style['strokeWidth'] = Math.max(1, Math.min(40, Math.round(d)))
+              }
+              hh.execute = function() { this.copyStyle('strokeWidth') }
+              hh.ignoreGrid = true
+              return hh
+            })()
+        list.push(h)
+      }
+      return list
+    }
+  }
 }
 import { ensureMxClient } from './utils'
 
@@ -344,7 +465,7 @@ export default {
         return
       }
       if (!el.__dragBound) {
-        bindDraggable(el, item)
+        bindDraggable(el, item, g)
         el.__dragBound = true
       }
     }
@@ -353,8 +474,7 @@ export default {
      * bindDraggable
      * 绑定拖拽到当前画布
      */
-    function bindDraggable(el, item) {
-      const graph = props.getGraph()
+    function bindDraggable(el, item, graph) {
       if (!graph) return
       const dragElt = renderThumbDom(item, item.w, item.h)
       mxUtils.makeDraggable(el, graph, (g, evt) => {
