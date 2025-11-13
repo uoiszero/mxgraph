@@ -20,6 +20,7 @@ export default {
   emits: ['ready'],
   setup(props, { emit, expose }) {
     const container = ref(null)
+    const graphRef = ref(null)
     let graph = null
     let rubberband = null
 
@@ -60,9 +61,7 @@ export default {
           graph.getModel().endUpdate()
         }
       }
-      // 通过 provide 提供 graph 与 getGraph，便于侧栏自动获取
-      provide('mxGraph', graph)
-      provide('getGraph', () => graph)
+      graphRef.value = graph
       emit('ready', graph)
     }
 
@@ -71,8 +70,12 @@ export default {
      * 返回 mxGraph 实例
      */
     function getGraph() {
-      return graph
+      return graphRef.value
     }
+
+    // 在 setup 同步阶段提供注入，避免运行时调用 provide 产生警告
+    provide('getGraph', () => graphRef.value)
+    provide('mxGraph', graphRef)
 
     onMounted(async () => {
       if (props.autoLoad) {

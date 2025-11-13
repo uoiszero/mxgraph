@@ -13,6 +13,7 @@ const stencilsSrcDir = path.resolve(root, 'javascript/examples/grapheditor/www/s
 // 目标路径
 const vendorDir = path.resolve(componentsDir, 'vendor/mxgraph')
 const stencilsDir = path.resolve(componentsDir, 'stencils')
+const geVendorDir = path.resolve(componentsDir, 'vendor/ge')
 
 function ensureDir(p) { if (!existsSync(p)) mkdirSync(p, { recursive: true }) }
 
@@ -39,6 +40,15 @@ function copyStencils() {
   }
 }
 
+/**
+ * 复制 Grapheditor 扩展形状注册脚本
+ */
+function copyGeShapes() {
+  ensureDir(geVendorDir)
+  cpSync(path.join(root, 'javascript/examples/grapheditor/www/js/Shapes.js'), path.join(geVendorDir, 'Shapes.js'))
+}
+
 copyMxRuntime()
 copyStencils()
+copyGeShapes()
 console.log('Assets prepared into VueComponents/vendor and VueComponents/stencils')

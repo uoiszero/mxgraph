@@ -50,6 +50,10 @@ export default {
 
     const groups = computed(() => groupsState)
 
+    // 在 setup 同步阶段获取注入，避免在运行时（setupItem 调用时）使用 inject 触发警告
+    const injectedGetter = inject('getGraph', null)
+    const injectedGraph = inject('mxGraph', null)
+
     /**
      * loadAll
      * 并行加载并注册所有 stencil 集合
@@ -100,9 +104,13 @@ export default {
     }
 
     function styleForItem(it) {
-      if (it.style) return it.style
-      if (it.shapeKey) return 'shape=' + it.shapeKey + ';whiteSpace=wrap;html=1'
-      return 'whiteSpace=wrap;html=1;'
+      let s = it.style || (it.shapeKey ? ('shape=' + it.shapeKey + ';whiteSpace=wrap;html=1') : 'whiteSpace=wrap;html=1;')
+      if (it.style && s.indexOf('shape=') === -1) {
+        // 将首个裸标记 token; 归一化为 shape=token;
+        const m = s.match(/^([a-zA-Z0-9_]+);/)
+        if (m) s = s.replace(/^([a-zA-Z0-9_]+);/, 'shape=$1;')
+      }
+      return s
     }
 
     function populateGeneral(items) {
@@ -151,7 +159,7 @@ export default {
       push('Isometric Square', 150, 90, 'html=1;whiteSpace=wrap;aspect=fixed;shape=isoRectangle;')
       push('Curly Bracket', 20, 120, 'shape=curlyBracket;whiteSpace=wrap;html=1;rounded=1;')
       push('Crossbar', 120, 20, 'shape=crossbar;whiteSpace=wrap;html=1;rounded=1;')
-      push('Image Label', 140, 60, 'label;whiteSpace=wrap;html=1;image=' + (window?.Editor?.prototype?.gearImage || 'images/gear.png') , 'Label')
+      // 去除依赖 gearImage 的示例，避免资源缺失导致缩略图异常
     }
 
     function populateAdvanced(items) {
@@ -265,8 +273,6 @@ export default {
         renderItemThumb(el, item)
         el.__thumb = true
       }
-      const injectedGetter = inject('getGraph', null)
-      const injectedGraph = inject('mxGraph', null)
       const g = (props.getGraph && props.getGraph()) || (injectedGetter && injectedGetter()) || injectedGraph
       if (!g) {
         // graph 尚未就绪，稍后重试绑定拖拽
