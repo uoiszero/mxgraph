@@ -3,20 +3,22 @@
   .toolbar
     button(@click="resetGraph") 重置
     button(@click="addSample") 添加示例
+    button(@click="openEditor") 编辑XML
   .workspace
     .sidebar
       MxStencilSidebar(:getGraph="getGraph")
     .canvas
       MxGraphCanvas(@ready="onReady")
+  MxEditDialog(:visible="showEditor" :getGraphFn="getGraph" @close="showEditor=false")
 </template>
 
 <script>
 import { ref } from "vue";
-import { MxGraphCanvas, MxStencilSidebar } from "../../../VueComponents/index.js";
+import { MxGraphCanvas, MxStencilSidebar, MxEditDialog } from "../../../VueComponents/index.js";
 
 export default {
   name: "MxGraphDemo",
-  components: { MxGraphCanvas, MxStencilSidebar },
+  components: { MxGraphCanvas, MxStencilSidebar, MxEditDialog },
   setup() {
     const container = ref(null);
     let graph = null;
@@ -27,10 +29,16 @@ export default {
     function onReady(g) { graph = g; }
 
     /**
+     * 打开编辑对话框
+     */
+    const showEditor = ref(false)
+    function openEditor() { showEditor.value = true }
+
+    /**
      * 清空并重建画布
      */
     function resetGraph() {
-      if (!graph) return initGraph();
+      if (!graph) return;
       graph.getModel().beginUpdate();
       try {
         graph.removeCells(graph.getChildVertices(graph.getDefaultParent()));
@@ -64,7 +72,7 @@ export default {
       return graph;
     }
 
-    return { container, resetGraph, addSample, getGraph, onReady };
+    return { container, resetGraph, addSample, getGraph, onReady, showEditor, openEditor };
   },
 };
 </script>
