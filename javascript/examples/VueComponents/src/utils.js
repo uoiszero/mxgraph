@@ -13,8 +13,9 @@ export function ensureMxClient({ mxClientUrl, mxBasePath, mxImageBasePath } = {}
       return resolve()
     }
 
-    // 缺省开箱即用路径（当前仓库内）
-    const defaultBase = '/@fs/Users/alex/temp/mxgraph/javascript/src'
+    // 缺省开箱即用路径（组件内置 vendor）
+    const vendorBase = new URL('../vendor/mxgraph/', import.meta.url).href.replace(/\/$/, '')
+    const defaultBase = vendorBase
     const url = mxClientUrl || `${defaultBase}/js/mxClient.js`
     if (!window.mxBasePath) window.mxBasePath = mxBasePath || defaultBase
     if (!window.mxImageBasePath) window.mxImageBasePath = mxImageBasePath || `${defaultBase}/images`
@@ -28,4 +29,3 @@ export function ensureMxClient({ mxClientUrl, mxBasePath, mxImageBasePath } = {}
     document.head.appendChild(s)
   })
 }
-

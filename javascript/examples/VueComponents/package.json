@@ -1,0 +1,15 @@
+{
+  "name": "mxgraph-vue-components",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "import": "./index.js"
+    }
+  },
+  "scripts": {
+    "prepare:assets": "node ./scripts/prepare-assets.mjs"
+  }
+}
+

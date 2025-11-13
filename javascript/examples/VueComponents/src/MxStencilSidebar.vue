@@ -13,22 +13,14 @@
 </template>
 
 <script>
-import { onMounted, reactive, ref, computed, nextTick } from 'vue'
+import { onMounted, reactive, ref, computed, nextTick, inject } from 'vue'
 import { ensureMxClient } from './utils'
 
 export default {
   name: 'MxStencilSidebar',
   props: {
-    getGraph: { type: Function, required: true },
-    stencils: {
-      type: Array,
-      default: () => [
-        { key: 'basic', title: '基础图形', url: '/@fs/Users/alex/temp/mxgraph/javascript/examples/grapheditor/www/stencils/basic.xml' },
-        { key: 'flowchart', title: '流程图', url: '/@fs/Users/alex/temp/mxgraph/javascript/examples/grapheditor/www/stencils/flowchart.xml' },
-        { key: 'arrows', title: '箭头', url: '/@fs/Users/alex/temp/mxgraph/javascript/examples/grapheditor/www/stencils/arrows.xml' },
-        { key: 'bpmn', title: 'BPMN', url: '/@fs/Users/alex/temp/mxgraph/javascript/examples/grapheditor/www/stencils/bpmn.xml' }
-      ]
-    },
+    getGraph: { type: Function, required: false, default: null },
+    stencils: { type: Array, default: () => [] },
     accordion: { type: Boolean, default: true },
     defaultOpenKey: { type: String, default: 'basic' }
   },
@@ -37,7 +29,19 @@ export default {
     let thumbGraph = null
 
     // 为每个分组预建一个响应式数组，避免 Map 非响应导致不更新
-    const groupsState = reactive(props.stencils.map(s => ({
+    const defaultStencilUrls = () => {
+      const base = new URL('../stencils/', import.meta.url).href
+      return [
+        { key: 'basic', title: '基础图形', url: new URL('basic.xml', base).href },
+        { key: 'flowchart', title: '流程图', url: new URL('flowchart.xml', base).href },
+        { key: 'arrows', title: '箭头', url: new URL('arrows.xml', base).href },
+        { key: 'bpmn', title: 'BPMN', url: new URL('bpmn.xml', base).href },
+      ]
+    }
+
+    const source = props.stencils.length ? props.stencils : defaultStencilUrls()
+
+    const groupsState = reactive(source.map(s => ({
       key: s.key,
       title: s.title,
       url: s.url,
@@ -53,6 +57,17 @@ export default {
     async function loadAll() {
       for (const g of groupsState) {
         await loadStencilSetAndEnumerate(g.url, g.items)
+      }
+      // 若内置路径加载失败（无任何条目），回退到 grapheditor 示例目录
+      const total = groupsState.reduce((n, g) => n + g.items.length, 0)
+      if (total === 0) {
+        const fallbackBase = '/@fs/Users/alex/temp/mxgraph/javascript/examples/grapheditor/www/stencils/'
+        for (const g of groupsState) {
+          const name = g.url.split('/').pop()
+          if (name) {
+            await loadStencilSetAndEnumerate(fallbackBase + name, g.items)
+          }
+        }
       }
     }
 
@@ -138,7 +153,9 @@ export default {
         renderItemThumb(el, item)
         el.__thumb = true
       }
-      const g = props.getGraph && props.getGraph()
+      const injectedGetter = inject('getGraph', null)
+      const injectedGraph = inject('mxGraph', null)
+      const g = (props.getGraph && props.getGraph()) || (injectedGetter && injectedGetter()) || injectedGraph
       if (!g) {
         // graph 尚未就绪，稍后重试绑定拖拽
         setTimeout(() => setupItem(el, item), 100)
@@ -225,16 +242,10 @@ export default {
 
     onMounted(async () => {
       await ensureMxClient()
-      // 等待 graph 就绪，以便一次性绑定拖拽
-      const waitGraph = async () => {
-        for (let i = 0; i < 50; i++) {
-          if (props.getGraph && props.getGraph()) return
-          await new Promise(r => setTimeout(r, 100))
-        }
-      }
-      await waitGraph()
+      // 先加载并渲染缩略图（不依赖外部 graph）
       await loadAll()
       await nextTick()
+      // 拖拽绑定将由 setupItem 在 graph 可用时自动完成
     })
 
     return { groups, setupItem, toggleGroup, openKey }

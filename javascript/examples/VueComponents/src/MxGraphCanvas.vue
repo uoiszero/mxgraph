@@ -3,7 +3,7 @@
 </template>
 
 <script>
-import { onMounted, onBeforeUnmount, ref, watch, computed } from 'vue'
+import { onMounted, onBeforeUnmount, ref, computed, provide } from 'vue'
 import { ensureMxClient } from './utils'
 
 export default {
@@ -60,6 +60,9 @@ export default {
           graph.getModel().endUpdate()
         }
       }
+      // 通过 provide 提供 graph 与 getGraph，便于侧栏自动获取
+      provide('mxGraph', graph)
+      provide('getGraph', () => graph)
       emit('ready', graph)
     }
 
@@ -92,4 +95,3 @@ export default {
   }
 }
 </script>
-
