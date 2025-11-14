@@ -503,14 +503,16 @@ export default {
     function bindDraggable(el, item, graph) {
       if (!graph) return
       const dragElt = renderThumbDom(item, item.w, item.h)
-      mxUtils.makeDraggable(el, graph, (g, evt) => {
-        const pt = g.getPointForEvent(evt)
+      const ds = mxUtils.makeDraggable(el, graph, (g, evt, target, x, y) => {
         const parent = g.getDefaultParent()
         g.getModel().beginUpdate()
         try {
-          g.insertVertex(parent, null, item.value || '', pt.x, pt.y, item.w, item.h, styleForItem(item))
+          g.insertVertex(parent, null, item.value || '', x, y, item.w, item.h, styleForItem(item))
         } finally { g.getModel().endUpdate() }
-      }, dragElt, 0, 0, true, true)
+      }, dragElt, 0, 0, graph.autoscroll, false, true)
+      ds.setGuidesEnabled(true)
+      ds.highlightDropTargets = true
+      ds.autoscroll = graph.autoscroll
     }
 
     /**
