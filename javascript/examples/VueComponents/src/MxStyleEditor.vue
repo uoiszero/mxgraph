@@ -1,6 +1,6 @@
 <template>
   <div class="style-editor">
-    <div class="row">
+    <div class="row style-text">
       <label>style</label><textarea v-model="styleText"></textarea>
     </div>
     <div class="row">
@@ -46,9 +46,8 @@
     <div class="row">
       <label>fillColor</label
       ><input
-        type="text"
-        v-model="fillColor"
-        placeholder="#ffffff/none" />
+        type="color"
+        v-model="fillColor" />
     </div>
     <div class="row actions">
       <button @click="applyText">应用文本</button>
@@ -323,6 +322,16 @@ textarea {
     "Liberation Mono", "Courier New", monospace;
   font-size: 12px;
 }
+
+.style-text {
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: start;
+
+  label {
+    flex: none;
+  }
+}
 input[type="number"],
 input[type="text"] {
   width: 120px;
@@ -331,6 +340,12 @@ input[type="text"] {
 }
 input[type="number"] {
   text-align: right;
+}
+/*
+    注意，颜色选择器的宽度计算和其他的不同
+ */
+input[type="color"] {
+  width: 136px;
 }
 .actions {
   justify-content: flex-end;
