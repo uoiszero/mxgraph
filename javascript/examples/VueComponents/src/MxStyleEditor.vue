@@ -7,15 +7,39 @@
       <label>width</label
       ><input
         type="number"
-        step="0.1"
+        step="1"
+        min="1"
         v-model.number="width"
         :placeholder="defaultHints.width" />
+    </div>
+    <div class="row">
+      <label>strokeWidth</label
+      ><input
+        type="number"
+        step="1"
+        min="1"
+        v-model.number="strokeWidth"
+        :placeholder="defaultHints.strokeWidth" />
+    </div>
+    <div class="row">
+      <label>strokeColor</label
+      ><input
+        type="color"
+        v-model="strokeColor" />
+    </div>
+    <div class="row">
+      <label>lineType</label
+      ><select v-model="lineType">
+        <option value="solid">实线</option>
+        <option value="dashed">虚线</option>
+      </select>
     </div>
     <div class="row">
       <label>startSize</label
       ><input
         type="number"
-        step="0.1"
+        step="1"
+        min="1"
         v-model.number="startSize"
         :placeholder="defaultHints.startSize" />
     </div>
@@ -23,7 +47,8 @@
       <label>endSize</label
       ><input
         type="number"
-        step="0.1"
+        step="1"
+        min="1"
         v-model.number="endSize"
         :placeholder="defaultHints.endSize" />
     </div>
@@ -31,7 +56,8 @@
       <label>startWidth</label
       ><input
         type="number"
-        step="0.1"
+        step="1"
+        min="1"
         v-model.number="startWidth"
         :placeholder="defaultHints.startWidth" />
     </div>
@@ -39,7 +65,8 @@
       <label>endWidth</label
       ><input
         type="number"
-        step="0.1"
+        step="1"
+        min="1"
         v-model.number="endWidth"
         :placeholder="defaultHints.endWidth" />
     </div>
@@ -66,6 +93,9 @@ export default {
   setup(props) {
     const styleText = ref("");
     const width = ref(null);
+    const strokeWidth = ref(null);
+    const strokeColor = ref("");
+    const lineType = ref("solid");
     const startSize = ref(null);
     const endSize = ref(null);
     const startWidth = ref(null);
@@ -73,6 +103,7 @@ export default {
     const fillColor = ref("");
     const defaultHints = ref({
       width: "",
+      strokeWidth: "",
       startSize: "",
       endSize: "",
       startWidth: "",
@@ -132,17 +163,27 @@ export default {
       const style = graph.getModel().getStyle(cell) || "";
       styleText.value = style;
       const o = parseStyle(style);
-      width.value = o.width != null ? Number(o.width) : null;
+      width.value = o.width != null ? Math.max(1, Math.round(Number(o.width))) : null;
+      strokeWidth.value =
+        o[mxConstants.STYLE_STROKEWIDTH] != null
+          ? Math.max(1, Math.round(Number(o[mxConstants.STYLE_STROKEWIDTH])))
+          : null;
+      strokeColor.value = o[mxConstants.STYLE_STROKECOLOR] || "";
+      const dashedFlag =
+        o[mxConstants.STYLE_DASHED] != null
+          ? o[mxConstants.STYLE_DASHED] === "1" || o[mxConstants.STYLE_DASHED] === "true"
+          : !!(graph.view.getState(cell)?.style?.dashed);
+      lineType.value = dashedFlag ? "dashed" : "solid";
       startSize.value =
         o[mxConstants.STYLE_STARTSIZE] != null
-          ? Number(o[mxConstants.STYLE_STARTSIZE])
+          ? Math.max(1, Math.round(Number(o[mxConstants.STYLE_STARTSIZE])))
           : null;
       endSize.value =
         o[mxConstants.STYLE_ENDSIZE] != null
-          ? Number(o[mxConstants.STYLE_ENDSIZE])
+          ? Math.max(1, Math.round(Number(o[mxConstants.STYLE_ENDSIZE])))
           : null;
-      startWidth.value = o.startWidth != null ? Number(o.startWidth) : null;
-      endWidth.value = o.endWidth != null ? Number(o.endWidth) : null;
+      startWidth.value = o.startWidth != null ? Math.max(1, Math.round(Number(o.startWidth))) : null;
+      endWidth.value = o.endWidth != null ? Math.max(1, Math.round(Number(o.endWidth))) : null;
       fillColor.value = o.fillColor || "";
       refreshDefaultHints(graph, cell, o);
     }
@@ -159,7 +200,7 @@ export default {
         (state && state.style && state.style.shape) ||
         ""
       ).toString();
-      const strokeWidth =
+      const _strokeWidth =
         Number(
           (state && state.shape && state.shape.strokewidth) ||
             (styleObj.strokeWidth != null ? styleObj.strokeWidth : 1)
@@ -173,13 +214,15 @@ export default {
 
       if (shapeName === "link") {
         const base = 4;
-        defWidth = String(base + Math.max(0, strokeWidth - 1));
+        defWidth = String(base + Math.max(0, _strokeWidth - 1));
       } else if (shapeName === "flexArrow") {
         const base = 10;
-        defWidth = String(base + Math.max(0, strokeWidth - 1));
+        defWidth = String(base + Math.max(0, _strokeWidth - 1));
         defStartWidth = "20";
         defEndWidth = "20";
       }
+
+      const defStrokeWidth = String(_strokeWidth);
 
       // 端点尺寸默认：连线用 DEFAULT_MARKERSIZE，箭头族用 ARROW_SIZE
       const isArrowFamily =
@@ -194,11 +237,21 @@ export default {
 
       defaultHints.value = {
         width: defWidth,
+        strokeWidth: defStrokeWidth,
         startSize: defStartSize,
         endSize: defEndSize,
         startWidth: defStartWidth,
         endWidth: defEndWidth,
       };
+    }
+
+    /**
+     * normalizePositiveInt
+     * 将输入值规范化为>=1的整数；null/undefined 保持为 null
+     */
+    function normalizePositiveInt(v) {
+      if (v == null || Number.isNaN(v)) return null;
+      return Math.max(1, Math.round(Number(v)));
     }
 
     /**
@@ -244,24 +297,48 @@ export default {
             graph.setCellStyles(mxConstants.STYLE_EDGE, null, cells);
           }
         }
-        if (width.value != null)
-          graph.setCellStyles("width", String(width.value), cells);
-        if (startSize.value != null)
+        const _width = normalizePositiveInt(width.value);
+        if (_width != null)
+          graph.setCellStyles("width", String(_width), cells);
+        const _sw = normalizePositiveInt(strokeWidth.value);
+        if (_sw != null)
+          graph.setCellStyles(
+            mxConstants.STYLE_STROKEWIDTH,
+            String(_sw),
+            cells
+          );
+        if (strokeColor.value)
+          graph.setCellStyles(
+            mxConstants.STYLE_STROKECOLOR,
+            strokeColor.value,
+            cells
+          );
+        if (lineType.value)
+          graph.setCellStyles(
+            mxConstants.STYLE_DASHED,
+            lineType.value === "dashed" ? "1" : null,
+            cells
+          );
+        const _ss = normalizePositiveInt(startSize.value);
+        if (_ss != null)
           graph.setCellStyles(
             mxConstants.STYLE_STARTSIZE,
-            String(startSize.value),
+            String(_ss),
             cells
           );
-        if (endSize.value != null)
+        const _es = normalizePositiveInt(endSize.value);
+        if (_es != null)
           graph.setCellStyles(
             mxConstants.STYLE_ENDSIZE,
-            String(endSize.value),
+            String(_es),
             cells
           );
-        if (startWidth.value != null)
-          graph.setCellStyles("startWidth", String(startWidth.value), cells);
-        if (endWidth.value != null)
-          graph.setCellStyles("endWidth", String(endWidth.value), cells);
+        const _stw = normalizePositiveInt(startWidth.value);
+        if (_stw != null)
+          graph.setCellStyles("startWidth", String(_stw), cells);
+        const _enw = normalizePositiveInt(endWidth.value);
+        if (_enw != null)
+          graph.setCellStyles("endWidth", String(_enw), cells);
         if (fillColor.value)
           graph.setCellStyles(
             mxConstants.STYLE_FILLCOLOR,
@@ -280,6 +357,9 @@ export default {
     return {
       styleText,
       width,
+      strokeWidth,
+      strokeColor,
+      lineType,
       startSize,
       endSize,
       startWidth,

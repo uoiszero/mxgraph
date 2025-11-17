@@ -105,41 +105,76 @@ export default {
         const isArrowShape = style && mxUtils.getValue(style, mxConstants.STYLE_SHAPE, null) === 'arrow'
         if (!isEdge || isArrowShape) return
 
-        menu.addItem('添加拐点', null, function () {
-          const t = graph.view.translate
-          const s = graph.view.scale
-          let dx = t.x
-          let dy = t.y
-          let parent = graph.getModel().getParent(cell)
-          let pgeo = graph.getCellGeometry(parent)
-          while (graph.getModel().isVertex(parent) && pgeo != null) {
-            dx += pgeo.x
-            dy += pgeo.y
-            parent = graph.getModel().getParent(parent)
-            pgeo = graph.getCellGeometry(parent)
-          }
-          const x = Math.round(graph.snap(graph.popupMenuHandler.triggerX / s - dx))
-          const y = Math.round(graph.snap(graph.popupMenuHandler.triggerY / s - dy))
+        const t = graph.view.translate
+        const s = graph.view.scale
+        let dx = t.x
+        let dy = t.y
+        let parent = graph.getModel().getParent(cell)
+        let pgeo = graph.getCellGeometry(parent)
+        while (graph.getModel().isVertex(parent) && pgeo != null) {
+          dx += pgeo.x
+          dy += pgeo.y
+          parent = graph.getModel().getParent(parent)
+          pgeo = graph.getCellGeometry(parent)
+        }
+        const x = Math.round(graph.snap(graph.popupMenuHandler.triggerX / s - dx))
+        const y = Math.round(graph.snap(graph.popupMenuHandler.triggerY / s - dy))
 
-          const geo0 = graph.getCellGeometry(cell)
-          if (!geo0) return
-          const geo = geo0.clone()
-          const offset = new mxPoint(t.x * s, t.y * s)
-          const pState = graph.view.getState(graph.getModel().getParent(cell))
-          const off = pState ? new mxPoint(pState.x, pState.y) : offset
-          const worldX = x * s + off.x
-          const worldY = y * s + off.y
-          const idx = mxUtils.findNearestSegment(state, worldX, worldY)
-          const pt = new mxPoint(x, y)
-          if (!geo.points || geo.points.length === 0) geo.points = [pt]
-          else geo.points.splice(idx, 0, pt)
-          graph.getModel().beginUpdate()
-          try {
-            graph.getModel().setGeometry(cell, geo)
-          } finally {
-            graph.getModel().endUpdate()
+        const geo0 = graph.getCellGeometry(cell)
+        if (!geo0) return
+        const geo = geo0.clone()
+        const offset = new mxPoint(t.x * s, t.y * s)
+        const pState = graph.view.getState(graph.getModel().getParent(cell))
+        const off = pState ? new mxPoint(pState.x, pState.y) : offset
+        const worldX = x * s + off.x
+        const worldY = y * s + off.y
+
+        let hitIndex = -1
+        if (geo.points && geo.points.length > 0) {
+          const th = (mxConstants.HANDLE_SIZE || 4) + 3
+          const tol2 = th * th
+          for (let i = 0; i < geo.points.length; i++) {
+            const p = geo.points[i]
+            const pwx = p.x * s + off.x
+            const pwy = p.y * s + off.y
+            const dxw = pwx - worldX
+            const dyw = pwy - worldY
+            const d2 = dxw * dxw + dyw * dyw
+            if (d2 <= tol2) {
+              hitIndex = i
+              break
+            }
           }
-        })
+        }
+
+        if (hitIndex >= 0) {
+          menu.addItem('删除拐点', null, function () {
+            const points = (geo.points || []).slice()
+            points.splice(hitIndex, 1)
+            const newGeo = geo.clone()
+            newGeo.points = points.length > 0 ? points : null
+            graph.getModel().beginUpdate()
+            try {
+              graph.getModel().setGeometry(cell, newGeo)
+            } finally {
+              graph.getModel().endUpdate()
+            }
+          })
+        } else {
+          menu.addItem('添加拐点', null, function () {
+            const idx = mxUtils.findNearestSegment(state, worldX, worldY)
+            const pt = new mxPoint(x, y)
+            const newGeo = geo.clone()
+            if (!newGeo.points || newGeo.points.length === 0) newGeo.points = [pt]
+            else newGeo.points.splice(idx, 0, pt)
+            graph.getModel().beginUpdate()
+            try {
+              graph.getModel().setGeometry(cell, newGeo)
+            } finally {
+              graph.getModel().endUpdate()
+            }
+          })
+        }
       }
     }
 
