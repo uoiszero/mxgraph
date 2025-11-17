@@ -1,16 +1,12 @@
 <template>
   <div class="style-editor">
     <div class="row"><label>style</label><textarea v-model="styleText"></textarea></div>
-    <div class="row">
-      <label>width</label><input type="number" step="0.1" v-model.number="width" :placeholder="defaultHints.width"/>
-      <label>startSize</label><input type="number" step="0.1" v-model.number="startSize" :placeholder="defaultHints.startSize"/>
-      <label>endSize</label><input type="number" step="0.1" v-model.number="endSize" :placeholder="defaultHints.endSize"/>
-    </div>
-    <div class="row">
-      <label>startWidth</label><input type="number" step="0.1" v-model.number="startWidth" :placeholder="defaultHints.startWidth"/>
-      <label>endWidth</label><input type="number" step="0.1" v-model.number="endWidth" :placeholder="defaultHints.endWidth"/>
-      <label>fillColor</label><input type="text" v-model="fillColor" placeholder="#ffffff/none"/>
-    </div>
+    <div class="row"><label>width</label><input type="number" step="0.1" v-model.number="width" :placeholder="defaultHints.width"/></div>
+    <div class="row"><label>startSize</label><input type="number" step="0.1" v-model.number="startSize" :placeholder="defaultHints.startSize"/></div>
+    <div class="row"><label>endSize</label><input type="number" step="0.1" v-model.number="endSize" :placeholder="defaultHints.endSize"/></div>
+    <div class="row"><label>startWidth</label><input type="number" step="0.1" v-model.number="startWidth" :placeholder="defaultHints.startWidth"/></div>
+    <div class="row"><label>endWidth</label><input type="number" step="0.1" v-model.number="endWidth" :placeholder="defaultHints.endWidth"/></div>
+    <div class="row"><label>fillColor</label><input type="text" v-model="fillColor" placeholder="#ffffff/none"/></div>
     <div class="row actions">
       <button @click="applyText">应用文本</button>
       <button @click="applyFields">应用参数</button>
@@ -177,10 +173,11 @@ export default {
 
 <style scoped>
 .style-editor { display: flex; flex-direction: column; gap: 8px; border: 1px solid #e5e7eb; border-radius: 6px; padding: 8px; }
-.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-label { font-size: 12px; color: #334155; }
+.row { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+label { font-size: 12px; color: #334155; width: 80px; flex: 0 0 80px; }
 textarea { width: 100%; height: 100px; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 12px; }
-input[type=number], input[type=text] { width: 120px; padding: 4px 6px; }
+input[type=number], input[type=text] { width: 120px; padding: 4px 6px; margin-left: auto;}
+input[type=number] {text-align: right;}
 .actions { justify-content: flex-end; }
 button { padding: 4px 8px; border: 1px solid #94a3b8; border-radius: 4px; background: #f8fafc; cursor: pointer; }
 button:hover { background: #eef2f7; }
