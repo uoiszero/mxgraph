@@ -52,6 +52,8 @@ export default {
           graph.setCellStyles(mxConstants.STYLE_STARTSIZE, null, cells)
           graph.setCellStyles(mxConstants.STYLE_ENDSIZE, null, cells)
           graph.setCellStyles('width', null, cells)
+          graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, null, cells)
+          graph.setCellStyles(mxConstants.STYLE_EDGE, null, cells)
         } else if (kind === 'link' || kind === 'flexArrow' || kind === 'arrow') {
           graph.setCellStyles(mxConstants.STYLE_SHAPE, kind, cells)
           graph.setCellStyles(mxConstants.STYLE_STARTSIZE, null, cells)
@@ -60,6 +62,8 @@ export default {
           if (kind === 'flexArrow') {
             graph.setCellStyles(mxConstants.STYLE_ENDARROW, mxConstants.ARROW_BLOCK, cells)
             graph.setCellStyles(mxConstants.STYLE_STARTARROW, mxConstants.NONE, cells)
+            graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, '1', cells)
+            graph.setCellStyles(mxConstants.STYLE_EDGE, null, cells)
           }
         }
       } finally {
@@ -81,6 +85,8 @@ export default {
         graph.setCellStyles(mxConstants.STYLE_STARTARROW, mxConstants.ARROW_BLOCK, cells)
         // 如果末端没有箭头，也默认开启，便于两端同时显示控制点
         graph.setCellStyles(mxConstants.STYLE_ENDARROW, mxConstants.ARROW_BLOCK, cells)
+        graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, '1', cells)
+        graph.setCellStyles(mxConstants.STYLE_EDGE, null, cells)
       } finally {
         graph.getModel().endUpdate()
       }
@@ -98,6 +104,8 @@ export default {
       try {
         graph.setCellStyles(mxConstants.STYLE_SHAPE, 'flexArrow', cells)
         graph.setCellStyles(mxConstants.STYLE_STARTARROW, mxConstants.NONE, cells)
+        graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, '1', cells)
+        graph.setCellStyles(mxConstants.STYLE_EDGE, null, cells)
       } finally { graph.getModel().endUpdate() }
     }
 
@@ -114,6 +122,8 @@ export default {
         graph.setCellStyles(mxConstants.STYLE_SHAPE, 'flexArrow', cells)
         graph.setCellStyles(mxConstants.STYLE_STARTARROW, mxConstants.NONE, cells)
         graph.setCellStyles(mxConstants.STYLE_ENDARROW, mxConstants.ARROW_BLOCK, cells)
+        graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, '1', cells)
+        graph.setCellStyles(mxConstants.STYLE_EDGE, null, cells)
       } finally { graph.getModel().endUpdate() }
     }
 
@@ -130,6 +140,8 @@ export default {
         graph.setCellStyles(mxConstants.STYLE_SHAPE, 'flexArrow', cells)
         graph.setCellStyles(mxConstants.STYLE_STARTARROW, mxConstants.ARROW_BLOCK, cells)
         graph.setCellStyles(mxConstants.STYLE_ENDARROW, mxConstants.NONE, cells)
+        graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, '1', cells)
+        graph.setCellStyles(mxConstants.STYLE_EDGE, null, cells)
       } finally { graph.getModel().endUpdate() }
     }
 

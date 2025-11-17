@@ -153,6 +153,8 @@ export default {
           })
           if (needsShape) {
             graph.setCellStyles(mxConstants.STYLE_SHAPE, 'flexArrow', cells)
+            graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, '1', cells)
+            graph.setCellStyles(mxConstants.STYLE_EDGE, null, cells)
           }
         }
         if (width.value != null) graph.setCellStyles('width', String(width.value), cells)
