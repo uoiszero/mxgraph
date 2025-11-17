@@ -4,6 +4,15 @@
       <label>style</label><textarea v-model="styleText"></textarea>
     </div>
     <div class="row">
+      <label>shape</label
+      ><select v-model="shapeType">
+        <option value="connection">Connection</option>
+        <option value="link">Link</option>
+        <option value="flexArrow">Arrow</option>
+        <option value="arrow">Simple Arrow</option>
+      </select>
+    </div>
+    <div class="row">
       <label>width</label
       ><input
         type="number"
@@ -85,7 +94,7 @@
 </template>
 
 <script>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onBeforeUnmount } from "vue";
 
 export default {
   name: "MxStyleEditor",
@@ -96,6 +105,7 @@ export default {
     const strokeWidth = ref(null);
     const strokeColor = ref("");
     const lineType = ref("solid");
+    const shapeType = ref('connection');
     const startSize = ref(null);
     const endSize = ref(null);
     const startWidth = ref(null);
@@ -174,6 +184,12 @@ export default {
           ? o[mxConstants.STYLE_DASHED] === "1" || o[mxConstants.STYLE_DASHED] === "true"
           : !!(graph.view.getState(cell)?.style?.dashed);
       lineType.value = dashedFlag ? "dashed" : "solid";
+      const shapeName = (
+        o.shape || (graph.view.getState(cell)?.style?.shape) || ''
+      ).toString();
+      shapeType.value = ['connection','link','flexArrow','arrow'].includes(shapeName)
+        ? (shapeName || 'connection')
+        : 'connection';
       startSize.value =
         o[mxConstants.STYLE_STARTSIZE] != null
           ? Math.max(1, Math.round(Number(o[mxConstants.STYLE_STARTSIZE])))
@@ -284,6 +300,26 @@ export default {
       const set = (k, v) => (v == null ? null : String(v));
       graph.getModel().beginUpdate();
       try {
+        // 先应用 shape 类型选择
+        if (shapeType.value === 'connection') {
+          graph.setCellStyles(mxConstants.STYLE_SHAPE, null, cells);
+          graph.setCellStyles(mxConstants.STYLE_STARTSIZE, null, cells);
+          graph.setCellStyles(mxConstants.STYLE_ENDSIZE, null, cells);
+          graph.setCellStyles('width', null, cells);
+          graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, null, cells);
+          graph.setCellStyles(mxConstants.STYLE_EDGE, null, cells);
+        } else if (shapeType.value === 'link' || shapeType.value === 'flexArrow' || shapeType.value === 'arrow') {
+          graph.setCellStyles(mxConstants.STYLE_SHAPE, shapeType.value, cells);
+          graph.setCellStyles(mxConstants.STYLE_STARTSIZE, null, cells);
+          graph.setCellStyles(mxConstants.STYLE_ENDSIZE, null, cells);
+          graph.setCellStyles('width', null, cells);
+          if (shapeType.value === 'flexArrow') {
+            graph.setCellStyles(mxConstants.STYLE_ENDARROW, mxConstants.ARROW_BLOCK, cells);
+            graph.setCellStyles(mxConstants.STYLE_STARTARROW, mxConstants.NONE, cells);
+            graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, '1', cells);
+            graph.setCellStyles(mxConstants.STYLE_EDGE, null, cells);
+          }
+        }
         // 当用户设置 width 且当前形状不是支持 width 的形状（flexArrow/link），自动转换为 flexArrow
         if (width.value != null) {
           const needsShape = cells.some(c => {
@@ -354,9 +390,34 @@ export default {
 
     onMounted(() => refreshFromSelection());
 
+    /**
+     * bindSelectionListener
+     * 绑定图形选中事件（SelectionModel CHANGE），自动读取并展示样式参数
+     */
+    function bindSelectionListener() {
+      const graph = getActiveGraph();
+      if (!graph) return;
+      const listener = function () { refreshFromSelection(); };
+      graph.getSelectionModel().addListener(mxEvent.CHANGE, listener);
+      selectionListener.value = listener;
+    }
+
+    const selectionListener = ref(null);
+    onMounted(() => {
+      bindSelectionListener();
+    });
+
+    onBeforeUnmount(() => {
+      const graph = getActiveGraph();
+      if (graph && selectionListener.value)
+        graph.getSelectionModel().removeListener(selectionListener.value);
+      selectionListener.value = null;
+    });
+
     return {
       styleText,
       width,
+      shapeType,
       strokeWidth,
       strokeColor,
       lineType,
@@ -365,6 +426,7 @@ export default {
       startWidth,
       endWidth,
       fillColor,
+      bindSelectionListener,
       applyText,
       applyFields,
       refreshFromSelection,
