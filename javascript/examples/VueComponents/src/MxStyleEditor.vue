@@ -105,7 +105,7 @@ export default {
     const strokeWidth = ref(null);
     const strokeColor = ref("");
     const lineType = ref("solid");
-    const shapeType = ref('connection');
+    const shapeType = ref("connection");
     const startSize = ref(null);
     const endSize = ref(null);
     const startWidth = ref(null);
@@ -173,7 +173,8 @@ export default {
       const style = graph.getModel().getStyle(cell) || "";
       styleText.value = style;
       const o = parseStyle(style);
-      width.value = o.width != null ? Math.max(1, Math.round(Number(o.width))) : null;
+      width.value =
+        o.width != null ? Math.max(1, Math.round(Number(o.width))) : null;
       strokeWidth.value =
         o[mxConstants.STYLE_STROKEWIDTH] != null
           ? Math.max(1, Math.round(Number(o[mxConstants.STYLE_STROKEWIDTH])))
@@ -181,15 +182,20 @@ export default {
       strokeColor.value = o[mxConstants.STYLE_STROKECOLOR] || "";
       const dashedFlag =
         o[mxConstants.STYLE_DASHED] != null
-          ? o[mxConstants.STYLE_DASHED] === "1" || o[mxConstants.STYLE_DASHED] === "true"
-          : !!(graph.view.getState(cell)?.style?.dashed);
+          ? o[mxConstants.STYLE_DASHED] === "1" ||
+            o[mxConstants.STYLE_DASHED] === "true"
+          : !!graph.view.getState(cell)?.style?.dashed;
       lineType.value = dashedFlag ? "dashed" : "solid";
       const shapeName = (
-        o.shape || (graph.view.getState(cell)?.style?.shape) || ''
+        o.shape ||
+        graph.view.getState(cell)?.style?.shape ||
+        ""
       ).toString();
-      shapeType.value = ['connection','link','flexArrow','arrow'].includes(shapeName)
-        ? (shapeName || 'connection')
-        : 'connection';
+      shapeType.value = ["connection", "link", "flexArrow", "arrow"].includes(
+        shapeName
+      )
+        ? shapeName || "connection"
+        : "connection";
       startSize.value =
         o[mxConstants.STYLE_STARTSIZE] != null
           ? Math.max(1, Math.round(Number(o[mxConstants.STYLE_STARTSIZE])))
@@ -198,8 +204,12 @@ export default {
         o[mxConstants.STYLE_ENDSIZE] != null
           ? Math.max(1, Math.round(Number(o[mxConstants.STYLE_ENDSIZE])))
           : null;
-      startWidth.value = o.startWidth != null ? Math.max(1, Math.round(Number(o.startWidth))) : null;
-      endWidth.value = o.endWidth != null ? Math.max(1, Math.round(Number(o.endWidth))) : null;
+      startWidth.value =
+        o.startWidth != null
+          ? Math.max(1, Math.round(Number(o.startWidth)))
+          : null;
+      endWidth.value =
+        o.endWidth != null ? Math.max(1, Math.round(Number(o.endWidth))) : null;
       fillColor.value = o.fillColor || "";
       refreshDefaultHints(graph, cell, o);
     }
@@ -301,22 +311,34 @@ export default {
       graph.getModel().beginUpdate();
       try {
         // 先应用 shape 类型选择
-        if (shapeType.value === 'connection') {
+        if (shapeType.value === "connection") {
           graph.setCellStyles(mxConstants.STYLE_SHAPE, null, cells);
           graph.setCellStyles(mxConstants.STYLE_STARTSIZE, null, cells);
           graph.setCellStyles(mxConstants.STYLE_ENDSIZE, null, cells);
-          graph.setCellStyles('width', null, cells);
+          graph.setCellStyles("width", null, cells);
           graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, null, cells);
           graph.setCellStyles(mxConstants.STYLE_EDGE, null, cells);
-        } else if (shapeType.value === 'link' || shapeType.value === 'flexArrow' || shapeType.value === 'arrow') {
+        } else if (
+          shapeType.value === "link" ||
+          shapeType.value === "flexArrow" ||
+          shapeType.value === "arrow"
+        ) {
           graph.setCellStyles(mxConstants.STYLE_SHAPE, shapeType.value, cells);
           graph.setCellStyles(mxConstants.STYLE_STARTSIZE, null, cells);
           graph.setCellStyles(mxConstants.STYLE_ENDSIZE, null, cells);
-          graph.setCellStyles('width', null, cells);
-          if (shapeType.value === 'flexArrow') {
-            graph.setCellStyles(mxConstants.STYLE_ENDARROW, mxConstants.ARROW_BLOCK, cells);
-            graph.setCellStyles(mxConstants.STYLE_STARTARROW, mxConstants.NONE, cells);
-            graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, '1', cells);
+          graph.setCellStyles("width", null, cells);
+          if (shapeType.value === "flexArrow") {
+            graph.setCellStyles(
+              mxConstants.STYLE_ENDARROW,
+              mxConstants.ARROW_BLOCK,
+              cells
+            );
+            graph.setCellStyles(
+              mxConstants.STYLE_STARTARROW,
+              mxConstants.NONE,
+              cells
+            );
+            graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, "1", cells);
             graph.setCellStyles(mxConstants.STYLE_EDGE, null, cells);
           }
         }
@@ -334,8 +356,7 @@ export default {
           }
         }
         const _width = normalizePositiveInt(width.value);
-        if (_width != null)
-          graph.setCellStyles("width", String(_width), cells);
+        if (_width != null) graph.setCellStyles("width", String(_width), cells);
         const _sw = normalizePositiveInt(strokeWidth.value);
         if (_sw != null)
           graph.setCellStyles(
@@ -357,24 +378,15 @@ export default {
           );
         const _ss = normalizePositiveInt(startSize.value);
         if (_ss != null)
-          graph.setCellStyles(
-            mxConstants.STYLE_STARTSIZE,
-            String(_ss),
-            cells
-          );
+          graph.setCellStyles(mxConstants.STYLE_STARTSIZE, String(_ss), cells);
         const _es = normalizePositiveInt(endSize.value);
         if (_es != null)
-          graph.setCellStyles(
-            mxConstants.STYLE_ENDSIZE,
-            String(_es),
-            cells
-          );
+          graph.setCellStyles(mxConstants.STYLE_ENDSIZE, String(_es), cells);
         const _stw = normalizePositiveInt(startWidth.value);
         if (_stw != null)
           graph.setCellStyles("startWidth", String(_stw), cells);
         const _enw = normalizePositiveInt(endWidth.value);
-        if (_enw != null)
-          graph.setCellStyles("endWidth", String(_enw), cells);
+        if (_enw != null) graph.setCellStyles("endWidth", String(_enw), cells);
         if (fillColor.value)
           graph.setCellStyles(
             mxConstants.STYLE_FILLCOLOR,
@@ -397,7 +409,9 @@ export default {
     function bindSelectionListener() {
       const graph = getActiveGraph();
       if (!graph) return;
-      const listener = function () { refreshFromSelection(); };
+      const listener = function () {
+        refreshFromSelection();
+      };
       graph.getSelectionModel().addListener(mxEvent.CHANGE, listener);
       selectionListener.value = listener;
     }
@@ -486,8 +500,10 @@ input[type="number"] {
 /*
     注意，颜色选择器的宽度计算和其他的不同
  */
-input[type="color"] {
+input[type="color"],
+select {
   width: 136px;
+  height: 28px;
 }
 .actions {
   justify-content: flex-end;
