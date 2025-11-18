@@ -160,6 +160,20 @@ export default {
       keyHandler.isControlDown = function(evt) {
         return mxEvent.isControlDown(evt) || (mxClient.IS_MAC && evt.metaKey)
       }
+      /**
+       * isGraphEvent
+       * 放宽事件来源限制：除输入控件外，全局接收快捷键
+       */
+      keyHandler.isGraphEvent = function(evt) {
+        const src = mxEvent.getSource(evt)
+        if (!src) return true
+        const name = (src.nodeName || '').toLowerCase()
+        const isEditable = name === 'input' || name === 'textarea' || (src.isContentEditable === true) || (src.getAttribute && src.getAttribute('contenteditable') === 'true')
+        if (isEditable) {
+          return (this.graph.cellEditor != null && this.graph.cellEditor.isEventSource(evt))
+        }
+        return true
+      }
       const bind = function(code, control, fn, shift) {
         const f = function() { fn() }
         if (control) {
