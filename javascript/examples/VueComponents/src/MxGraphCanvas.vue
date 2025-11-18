@@ -23,6 +23,8 @@ export default {
     const graphRef = ref(null)
     let graph = null
     let rubberband = null
+    let undoManager = null
+    let keyHandler = null
 
     const containerStyle = computed(() => ({
       width: typeof props.width === 'number' ? props.width + 'px' : props.width,
@@ -33,6 +35,10 @@ export default {
     /**
      * initGraph
      * 初始化 mxGraph 图形实例并启用常用交互
+     */
+    /**
+     * initGraph
+     * 初始化 mxGraph 并启用常用交互与撤销管理
      */
     function initGraph() {
       if (!window.mxClient) throw new Error('mxClient 未加载')
@@ -50,6 +56,9 @@ export default {
       graph.setConnectable(true)
       graph.setTooltips(true)
       graph.setCellsResizable(true)
+
+      setupUndoManager(graph)
+      createKeyHandler(graph)
 
       if (props.initSample) {
         const parent = graph.getDefaultParent()
@@ -74,6 +83,99 @@ export default {
      */
     function getGraph() {
       return graphRef.value
+    }
+
+    /**
+     * setupUndoManager
+     * 创建并连接撤销管理器到模型与视图事件
+     */
+    function setupUndoManager(graph) {
+      undoManager = new mxUndoManager()
+      const listener = function(sender, evt) {
+        undoManager.undoableEditHappened(evt.getProperty('edit'))
+      }
+      graph.getModel().addListener(mxEvent.UNDO, listener)
+      graph.getView().addListener(mxEvent.UNDO, listener)
+
+      const syncSelection = function(sender, evt) {
+        const changes = evt.getProperty('edit').changes || []
+        const cand = graph.getSelectionCellsForChanges(changes, function(change) {
+          return !(change instanceof mxChildChange)
+        })
+        if (cand.length > 0) {
+          const cells = []
+          for (let i = 0; i < cand.length; i++) {
+            if (graph.view.getState(cand[i]) != null) cells.push(cand[i])
+          }
+          graph.setSelectionCells(cells)
+        }
+      }
+      undoManager.addListener(mxEvent.UNDO, syncSelection)
+      undoManager.addListener(mxEvent.REDO, syncSelection)
+
+      graph.undoManager = undoManager
+    }
+
+    /**
+     * undo
+     * 执行撤销（编辑文本时优先使用原生撤销）
+     */
+    function undo() {
+      if (!graph || !undoManager) return
+      try {
+        if (graph.isEditing() && graph.cellEditor && graph.cellEditor.textarea) {
+          const before = graph.cellEditor.textarea.innerHTML
+          document.execCommand('undo', false, null)
+          if (before === graph.cellEditor.textarea.innerHTML) {
+            graph.stopEditing(true)
+            undoManager.undo()
+          }
+        } else {
+          undoManager.undo()
+        }
+      } catch (e) {}
+    }
+
+    /**
+     * redo
+     * 执行重做（编辑文本时优先使用原生重做）
+     */
+    function redo() {
+      if (!graph || !undoManager) return
+      try {
+        if (graph.isEditing()) {
+          document.execCommand('redo', false, null)
+        } else {
+          undoManager.redo()
+        }
+      } catch (e) {}
+    }
+
+    /**
+     * createKeyHandler
+     * 绑定撤销/重做快捷键（Mac 支持 Cmd）
+     */
+    function createKeyHandler(graph) {
+      keyHandler = new mxKeyHandler(graph)
+      keyHandler.isControlDown = function(evt) {
+        return mxEvent.isControlDown(evt) || (mxClient.IS_MAC && evt.metaKey)
+      }
+      const bind = function(code, control, fn, shift) {
+        const f = function() { fn() }
+        if (control) {
+          if (shift) keyHandler.bindControlShiftKey(code, f)
+          else keyHandler.bindControlKey(code, f)
+        } else {
+          if (shift) keyHandler.bindShiftKey(code, f)
+          else keyHandler.bindKey(code, f)
+        }
+      }
+      bind(90, true, undo) // Ctrl/Cmd+Z
+      if (!mxClient.IS_WIN) bind(90, true, redo, true) // Ctrl/Cmd+Shift+Z
+      else bind(89, true, redo) // Ctrl+Y on Windows
+
+      graph.undo = undo
+      graph.redo = redo
     }
 
     /**
@@ -233,9 +335,11 @@ export default {
     onBeforeUnmount(() => {
       rubberband = null
       graph = null
+      undoManager = null
+      keyHandler = null
     })
 
-    expose({ getGraph })
+    expose({ getGraph, undo, redo })
     return { container, containerStyle }
   }
 }

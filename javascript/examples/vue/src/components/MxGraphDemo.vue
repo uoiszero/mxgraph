@@ -3,6 +3,8 @@
   .toolbar
     button(@click="resetGraph") 重置
     button(@click="addSample") 添加示例
+    button(@click="doUndo") 撤销
+    button(@click="doRedo") 重做
     button(@click="openEditor") 编辑XML
     MxEdgeStylePicker(:getGraph="getGraph")
   .workspace
@@ -28,6 +30,10 @@ export default {
 
     /**
      * 初始化 mxGraph 图形实例并启用常用交互
+     */
+    /**
+     * onReady
+     * 画布就绪回调，缓存 graph 并准备撤销接口
      */
     function onReady(g) { graph = g; }
 
@@ -69,13 +75,31 @@ export default {
     }
 
     /**
+     * doUndo
+     * 调用画布撤销
+     */
+    function doUndo() {
+      if (!graph) return;
+      if (typeof graph.undo === 'function') graph.undo();
+    }
+
+    /**
+     * doRedo
+     * 调用画布重做
+     */
+    function doRedo() {
+      if (!graph) return;
+      if (typeof graph.redo === 'function') graph.redo();
+    }
+
+    /**
      * 获取 graph 实例（供侧边栏拖拽使用）
      */
     function getGraph() {
       return graph;
     }
 
-    return { container, resetGraph, addSample, getGraph, onReady, showEditor, openEditor };
+    return { container, resetGraph, addSample, getGraph, onReady, showEditor, openEditor, doUndo, doRedo };
   },
 };
 </script>
