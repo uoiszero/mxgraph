@@ -212,6 +212,44 @@ export default {
     }
 
     /**
+     * 获取箭头样式
+     * @param graph mxGraph 实例
+     * @param style 样式对象
+     * @param cell 边对象
+     */
+    function getArrowStyle(graph, style, cell) {
+      const startArrowName = (
+        style.startArrow ||
+        graph.view.getState(cell)?.style?.startArrow ||
+        ""
+      ).toString();
+      const endArrowName = (
+        style.endArrow ||
+        graph.view.getState(cell)?.style?.endArrow ||
+        ""
+      ).toString();
+      /*
+       * 2025/11/19 Yue Ao
+       * 注意，样式为空或者为 none 时，都表示无箭头
+       */
+      /**
+       * 判断是否有箭头样式
+       * @param s 箭头样式
+       */
+      const hasArrow = s =>
+        typeof s !== "undefined" && s !== "" && s !== null && s !== "none";
+      if (hasArrow(startArrowName) && hasArrow(endArrowName)) {
+        arrowStyle.value = "both";
+      } else if (hasArrow(startArrowName)) {
+        arrowStyle.value = "startOnly";
+      } else if (hasArrow(endArrowName)) {
+        arrowStyle.value = "endOnly";
+      } else {
+        arrowStyle.value = "none";
+      }
+    }
+
+    /**
      * refreshFromSelection
      * 从当前选中边读取 style 字符串与关键参数
      */
@@ -246,6 +284,7 @@ export default {
         .includes(shapeName)
         ? shapeName || "connection"
         : "connection";
+      getArrowStyle(graph, o, cell);
       startSize.value =
         o[mxConstants.STYLE_STARTSIZE] != null
           ? Math.max(1, Math.round(Number(o[mxConstants.STYLE_STARTSIZE])))
