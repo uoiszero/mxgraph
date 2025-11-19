@@ -6,7 +6,6 @@
     button(@click="doUndo") 撤销
     button(@click="doRedo") 重做
     button(@click="openEditor") 编辑XML
-    MxEdgeStylePicker(:getGraph="getGraph")
   .workspace
     .sidebar
       MxStencilSidebar(:getGraph="getGraph")
@@ -19,11 +18,16 @@
 
 <script>
 import { ref } from "vue";
-import { MxGraphCanvas, MxStencilSidebar, MxEditDialog, MxEdgeStylePicker, MxStyleEditor } from "../../../VueComponents/index.js";
+import {
+  MxGraphCanvas,
+  MxStencilSidebar,
+  MxEditDialog,
+  MxStyleEditor,
+} from "../../../VueComponents/index.js";
 
 export default {
   name: "MxGraphDemo",
-  components: { MxGraphCanvas, MxStencilSidebar, MxEditDialog, MxEdgeStylePicker, MxStyleEditor },
+  components: { MxGraphCanvas, MxStencilSidebar, MxEditDialog, MxStyleEditor },
   setup() {
     const container = ref(null);
     let graph = null;
@@ -35,13 +39,17 @@ export default {
      * onReady
      * 画布就绪回调，缓存 graph 并准备撤销接口
      */
-    function onReady(g) { graph = g; }
+    function onReady(g) {
+      graph = g;
+    }
 
     /**
      * 打开编辑对话框
      */
-    const showEditor = ref(false)
-    function openEditor() { showEditor.value = true }
+    const showEditor = ref(false);
+    function openEditor() {
+      showEditor.value = true;
+    }
 
     /**
      * 清空并重建画布
@@ -80,7 +88,7 @@ export default {
      */
     function doUndo() {
       if (!graph) return;
-      if (typeof graph.undo === 'function') graph.undo();
+      if (typeof graph.undo === "function") graph.undo();
     }
 
     /**
@@ -89,7 +97,7 @@ export default {
      */
     function doRedo() {
       if (!graph) return;
-      if (typeof graph.redo === 'function') graph.redo();
+      if (typeof graph.redo === "function") graph.redo();
     }
 
     /**
@@ -99,7 +107,17 @@ export default {
       return graph;
     }
 
-    return { container, resetGraph, addSample, getGraph, onReady, showEditor, openEditor, doUndo, doRedo };
+    return {
+      container,
+      resetGraph,
+      addSample,
+      getGraph,
+      onReady,
+      showEditor,
+      openEditor,
+      doUndo,
+      doRedo,
+    };
   },
 };
 </script>
