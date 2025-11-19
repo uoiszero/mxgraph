@@ -12,4 +12,3 @@
     "prepare:assets": "node ./scripts/prepare-assets.mjs"
   }
 }
-
