@@ -414,7 +414,8 @@ export default {
      * @param cells 选中单元
      */
     function setShapeStyle(graph, cells) {
-      if (shapeType.value === "connection") {
+      const _type = unref(shapeType);
+      if (_type === "connection") {
         graph.setCellStyles(mxConstants.STYLE_SHAPE, null, cells);
         graph.setCellStyles(mxConstants.STYLE_STARTSIZE, null, cells);
         graph.setCellStyles(mxConstants.STYLE_ENDSIZE, null, cells);
@@ -422,15 +423,15 @@ export default {
         graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, null, cells);
         graph.setCellStyles(mxConstants.STYLE_EDGE, null, cells);
       } else if (
-        shapeType.value === "link" ||
-        shapeType.value === "flexArrow" ||
-        shapeType.value === "arrow"
+        _type === "link" ||
+        _type === "flexArrow" ||
+        _type === "arrow"
       ) {
-        graph.setCellStyles(mxConstants.STYLE_SHAPE, shapeType.value, cells);
+        graph.setCellStyles(mxConstants.STYLE_SHAPE, _type, cells);
         graph.setCellStyles(mxConstants.STYLE_STARTSIZE, null, cells);
         graph.setCellStyles(mxConstants.STYLE_ENDSIZE, null, cells);
         graph.setCellStyles("width", null, cells);
-        if (shapeType.value === "flexArrow") {
+        if (_type === "flexArrow") {
           graph.setCellStyles(
             mxConstants.STYLE_ENDARROW,
             mxConstants.ARROW_BLOCK,
