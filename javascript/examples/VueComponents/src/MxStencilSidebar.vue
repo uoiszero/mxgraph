@@ -492,6 +492,16 @@ export default {
       return s;
     }
 
+    /**
+     * isEdgeLikeStyle
+     * 判断条目样式是否为“边类”形状（需要通过 insertEdge 渲染）
+     * 目前支持：flexArrow、link
+     */
+    function isEdgeLikeStyle(style) {
+      const s = String(style || "").toLowerCase();
+      return s.includes("shape=flexarrow") || s.includes("shape=link");
+    }
+
     function populateGeneral(items) {
       if (!items) return;
       const push = (label, w, h, style, value = "") =>
@@ -593,6 +603,12 @@ export default {
         100,
         80,
         "shape=dataStorage;whiteSpace=wrap;html=1;fixedSize=1;"
+      );
+      push(
+        "Arrow",
+        60,
+        60,
+        "shape=flexArrow;endArrow=block;startArrow=none;noEdgeStyle=1;strokeWidth=2;"
       );
     }
 
@@ -886,16 +902,42 @@ export default {
           const parent = g.getDefaultParent();
           g.getModel().beginUpdate();
           try {
-            g.insertVertex(
-              parent,
-              null,
-              item.value || "",
-              x,
-              y,
-              item.w,
-              item.h,
-              styleForItem(item)
-            );
+            const style = styleForItem(item);
+            if (isEdgeLikeStyle(style)) {
+              // 为边类图形创建两个隐形端点，并插入一条斜向边
+              const v1 = g.insertVertex(
+                parent,
+                null,
+                "",
+                x,
+                y,
+                1,
+                1,
+                "shape=point;perimeter=ellipsePerimeter;fillColor=none;strokeColor=none;"
+              );
+              const v2 = g.insertVertex(
+                parent,
+                null,
+                "",
+                x + item.w,
+                y + item.h,
+                1,
+                1,
+                "shape=point;perimeter=ellipsePerimeter;fillColor=none;strokeColor=none;"
+              );
+              g.insertEdge(parent, null, item.value || "", v1, v2, style);
+            } else {
+              g.insertVertex(
+                parent,
+                null,
+                item.value || "",
+                x,
+                y,
+                item.w,
+                item.h,
+                style
+              );
+            }
           } finally {
             g.getModel().endUpdate();
           }
@@ -933,16 +975,43 @@ export default {
       g.labelsVisible = false;
       g.getModel().beginUpdate();
       try {
-        g.insertVertex(
-          g.getDefaultParent(),
-          null,
-          item.value || "",
-          0,
-          0,
-          item.w,
-          item.h,
-          styleForItem(item)
-        );
+        const style = styleForItem(item);
+        const parent = g.getDefaultParent();
+        if (isEdgeLikeStyle(style)) {
+          // 使用两个隐形端点 + 一条边来渲染缩略图
+          const v1 = g.insertVertex(
+            parent,
+            null,
+            "",
+            0,
+            0,
+            1,
+            1,
+            "shape=point;perimeter=ellipsePerimeter;fillColor=none;strokeColor=none;"
+          );
+          const v2 = g.insertVertex(
+            parent,
+            null,
+            "",
+            item.w,
+            item.h,
+            1,
+            1,
+            "shape=point;perimeter=ellipsePerimeter;fillColor=none;strokeColor=none;"
+          );
+          g.insertEdge(parent, null, "", v1, v2, style);
+        } else {
+          g.insertVertex(
+            parent,
+            null,
+            item.value || "",
+            0,
+            0,
+            item.w,
+            item.h,
+            style
+          );
+        }
       } finally {
         g.getModel().endUpdate();
       }
