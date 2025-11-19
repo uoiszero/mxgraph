@@ -398,20 +398,15 @@ export default {
 
     // 为每个分组预建一个响应式数组，避免 Map 非响应导致不更新
     const defaultStencilUrls = () => {
-      const base = new URL("../stencils/", import.meta.url).href;
+      const basic = new URL("../stencils/basic.xml", import.meta.url).href;
+      const flow = new URL("../stencils/flowchart.xml", import.meta.url).href;
+      const arrows = new URL("../stencils/arrows.xml", import.meta.url).href;
+      const bpmn = new URL("../stencils/bpmn.xml", import.meta.url).href;
       return [
-        {
-          key: "basic",
-          title: "基础图形",
-          url: new URL("basic.xml", base).href,
-        },
-        {
-          key: "flowchart",
-          title: "流程图",
-          url: new URL("flowchart.xml", base).href,
-        },
-        { key: "arrows", title: "箭头", url: new URL("arrows.xml", base).href },
-        { key: "bpmn", title: "BPMN", url: new URL("bpmn.xml", base).href },
+        { key: "basic", title: "基础图形", url: basic },
+        { key: "flowchart", title: "流程图", url: flow },
+        { key: "arrows", title: "箭头", url: arrows },
+        { key: "bpmn", title: "BPMN", url: bpmn },
       ];
     };
 

@@ -49,21 +49,21 @@ export function ensureMxClient({
       return loadGeIfNeeded();
     }
 
-    // 缺省开箱即用路径（组件内置 vendor），并提供绝对路径兜底（/@fs/...）
-    const vendorRel = new URL(
-      "../vendor/mxgraph/",
+    // 缺省开箱即用路径（组件内置 vendor），以具体文件定位避免目录解析报错
+    const mxClientRel = new URL(
+      "../vendor/mxgraph/js/mxClient.js",
       import.meta.url
-    ).href.replace(/\/$/, "");
-    const vendorAbs =
-      "/@fs/Users/alex/temp/mxgraph/javascript/examples/VueComponents/vendor/mxgraph";
-    const tryBases = [mxBasePath, vendorRel, vendorAbs].filter(Boolean);
+    ).href;
+    const mxClientAbs =
+      "/@fs/Users/alex/temp/mxgraph/javascript/examples/VueComponents/vendor/mxgraph/js/mxClient.js";
+    const tryUrls = [mxClientUrl, mxClientRel, mxClientAbs].filter(Boolean);
 
-    const loadWithBase = baseIdx => {
-      if (baseIdx >= tryBases.length) {
-        return reject(new Error("Failed to load mxClient.js from all bases"));
+    const loadWithIndex = idx => {
+      if (idx >= tryUrls.length) {
+        return reject(new Error("Failed to load mxClient.js from all candidates"));
       }
-      const base = tryBases[baseIdx].replace(/\/$/, "");
-      const url = mxClientUrl || `${base}/js/mxClient.js`;
+      const url = tryUrls[idx];
+      const base = url.replace(/\/js\/mxClient\.js$/, "");
       if (!window.mxBasePath) window.mxBasePath = base;
       if (!window.mxImageBasePath)
         window.mxImageBasePath = mxImageBasePath || `${base}/images`;
@@ -98,13 +98,12 @@ export function ensureMxClient({
         loadGe(0);
       };
       s.onerror = () => {
-        // 尝试下一个 base
         document.head.removeChild(s);
-        loadWithBase(baseIdx + 1);
+        loadWithIndex(idx + 1);
       };
       document.head.appendChild(s);
     };
 
-    loadWithBase(0);
+    loadWithIndex(0);
   });
 }
