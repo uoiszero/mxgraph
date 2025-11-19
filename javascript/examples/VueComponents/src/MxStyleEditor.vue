@@ -57,6 +57,13 @@
       </select>
     </div>
     <div class="row">
+      <label>rounded</label
+      ><select v-model="rounded">
+        <option :value="false">直角</option>
+        <option :value="true">圆角</option>
+      </select>
+    </div>
+    <div class="row">
       <label>startSize</label
       ><input
         type="number"
@@ -127,6 +134,7 @@ export default {
     const strokeWidth = ref(null);
     const strokeColor = ref("");
     const lineType = ref("solid");
+    const rounded = ref(false);
     const shapeType = ref("connection");
     const arrowStyle = ref("endOnly");
     const startSize = ref(null);
@@ -297,6 +305,12 @@ export default {
             o[mxConstants.STYLE_DASHED] === "true"
           : !!graph.view.getState(cell)?.style?.dashed;
       lineType.value = dashedFlag ? "dashed" : "solid";
+      const roundedFlag =
+        o[mxConstants.STYLE_ROUNDED] != null
+          ? o[mxConstants.STYLE_ROUNDED] === "1" ||
+            o[mxConstants.STYLE_ROUNDED] === "true"
+          : !!graph.view.getState(cell)?.style?.rounded;
+      rounded.value = !!roundedFlag;
       const shapeName = (
         o.shape ||
         graph.view.getState(cell)?.style?.shape ||
@@ -547,6 +561,11 @@ export default {
             lineType.value === "dashed" ? "1" : null,
             cells
           );
+        graph.setCellStyles(
+          mxConstants.STYLE_ROUNDED,
+          rounded.value ? "1" : null,
+          cells
+        );
         const _ss = normalizePositiveInt(startSize.value);
         if (_ss != null)
           graph.setCellStyles(mxConstants.STYLE_STARTSIZE, String(_ss), cells);
@@ -686,6 +705,7 @@ export default {
       strokeWidth,
       strokeColor,
       lineType,
+      rounded,
       startSize,
       endSize,
       startWidth,
