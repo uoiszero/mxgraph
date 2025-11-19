@@ -610,6 +610,12 @@ export default {
         60,
         "shape=flexArrow;endArrow=block;startArrow=none;noEdgeStyle=1;strokeWidth=2;"
       );
+      push(
+        "DoubleArrow",
+        60,
+        60,
+        "shape=flexArrow;startArrow=block;endArrow=block;noEdgeStyle=1;strokeWidth=2;"
+      );
     }
 
     function populateMisc(items) {
@@ -873,10 +879,16 @@ export default {
         renderItemThumb(el, item);
         el.__thumb = true;
       }
+      const lastGraphFn =
+        typeof window !== "undefined" && typeof window.__lastGraphRef === "function"
+          ? window.__lastGraphRef
+          : null;
+      const lastGraph = lastGraphFn ? lastGraphFn() : null;
       const g =
         (props.getGraph && props.getGraph()) ||
         (injectedGetter && injectedGetter()) ||
-        injectedGraph;
+        injectedGraph ||
+        lastGraph;
       if (!g) {
         // graph 尚未就绪，稍后重试绑定拖拽
         setTimeout(() => setupItem(el, item), 100);
@@ -945,13 +957,13 @@ export default {
         dragElt,
         0,
         0,
-        graph.autoscroll,
+        graph && graph.value ? graph.value.autoscroll : graph.autoscroll,
         false,
         true
       );
       ds.setGuidesEnabled(true);
       ds.highlightDropTargets = true;
-      ds.autoscroll = graph.autoscroll;
+      ds.autoscroll = graph && graph.value ? graph.value.autoscroll : graph.autoscroll;
     }
 
     /**
