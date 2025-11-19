@@ -448,20 +448,13 @@ export default {
       if (firstNonEmpty && openKey.value !== firstNonEmpty.key) {
         openKey.value = firstNonEmpty.key;
       }
-      // 对每个空的 stencil 分组做逐级回退：组件绝对路径 -> grapheditor 示例路径
-      const compAbs =
-        "/@fs/Users/alex/temp/mxgraph/javascript/examples/VueComponents/stencils/";
-      const geAbs =
-        "/@fs/Users/alex/temp/mxgraph/javascript/examples/grapheditor/www/stencils/";
+      const compRelBase = new URL("../stencils/", import.meta.url).href;
       for (const g of groupsState) {
         if (!g.url) continue;
         if (g.items.length > 0) continue;
         const name = g.url.split("/").pop();
         if (!name) continue;
-        for (const base of [compAbs, geAbs]) {
-          await loadStencilSetAndEnumerate(base + name, g.items);
-          if (g.items.length > 0) break;
-        }
+        await loadStencilSetAndEnumerate(compRelBase + name, g.items);
       }
       const firstNonEmpty2 = groupsState.find(g => g.items.length > 0);
       if (firstNonEmpty2) openKey.value = firstNonEmpty2.key;

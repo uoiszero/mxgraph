@@ -26,9 +26,7 @@ export function ensureMxClient({
         )
           return resolve();
         const geRel = new URL("../vendor/ge/Shapes.js", import.meta.url).href;
-        const geAbs =
-          "/@fs/Users/alex/temp/mxgraph/javascript/examples/VueComponents/vendor/ge/Shapes.js";
-        const geCandidates = [geRel, geAbs];
+        const geCandidates = [geRel];
         if (typeof window !== "undefined" && !window.Graph) window.Graph = {};
         const tryLoad = i => {
           if (i >= geCandidates.length) return resolve();
@@ -54,9 +52,7 @@ export function ensureMxClient({
       "../vendor/mxgraph/js/mxClient.js",
       import.meta.url
     ).href;
-    const mxClientAbs =
-      "/@fs/Users/alex/temp/mxgraph/javascript/examples/VueComponents/vendor/mxgraph/js/mxClient.js";
-    const tryUrls = [mxClientUrl, mxClientRel, mxClientAbs].filter(Boolean);
+    const tryUrls = [mxClientUrl, mxClientRel].filter(Boolean);
 
     const loadWithIndex = idx => {
       if (idx >= tryUrls.length) {
@@ -75,9 +71,7 @@ export function ensureMxClient({
       s.onload = () => {
         // 加载 Grapheditor 扩展形状（可选）
         const geRel = new URL("../vendor/ge/Shapes.js", import.meta.url).href;
-        const geAbs =
-          "/@fs/Users/alex/temp/mxgraph/javascript/examples/VueComponents/vendor/ge/Shapes.js";
-        const geCandidates = [geRel, geAbs];
+        const geCandidates = [geRel];
         const loadGe = i => {
           if (i >= geCandidates.length) return resolve();
           if (typeof window !== "undefined" && !window.Graph) {
