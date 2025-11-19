@@ -897,7 +897,7 @@ export default {
       const dragElt = renderThumbDom(item, item.w, item.h);
       const ds = mxUtils.makeDraggable(
         el,
-        graph,
+        () => (graph && graph.value ? graph.value : graph),
         (g, evt, target, x, y) => {
           const parent = g.getDefaultParent();
           g.getModel().beginUpdate();

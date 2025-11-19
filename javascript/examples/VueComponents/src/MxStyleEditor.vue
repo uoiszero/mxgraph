@@ -102,6 +102,7 @@
       <button @click="applyText">应用文本</button>
       <button @click="applyFields">应用参数</button>
       <button @click="refreshFromSelection">读取选中</button>
+      <button @click="deleteSelected">删除选中</button>
     </div>
   </div>
 </template>
@@ -570,6 +571,49 @@ export default {
       refreshFromSelection();
     }
 
+    /**
+     * deleteSelected
+     * 删除当前选中的图形；同时清理由侧栏创建的隐形端点
+     */
+    function deleteSelected() {
+      const graph = getActiveGraph();
+      if (!graph) return;
+      if (graph.isEditing()) return;
+      const model = graph.getModel();
+      const selected = graph.getSelectionCells();
+      if (!selected || !selected.length) return;
+      const toRemove = selected.slice();
+      for (let i = 0; i < selected.length; i++) {
+        const c = selected[i];
+        if (model.isEdge(c)) {
+          const s = model.getTerminal(c, true);
+          const t = model.getTerminal(c, false);
+          const terms = [s, t];
+          for (let j = 0; j < terms.length; j++) {
+            const term = terms[j];
+            if (!term) continue;
+            const style = model.getStyle(term) || "";
+            const isInvisiblePoint =
+              style.indexOf("shape=point") !== -1 &&
+              style.indexOf("fillColor=none") !== -1 &&
+              style.indexOf("strokeColor=none") !== -1;
+            if (isInvisiblePoint) {
+              const deg = model.getEdgeCount(term);
+              const hasChildren = model.getChildCount(term) > 0;
+              if (deg <= 1 && !hasChildren) toRemove.push(term);
+            }
+          }
+        }
+      }
+      const topmost = model.getTopmostCells(toRemove);
+      model.beginUpdate();
+      try {
+        graph.removeCells(topmost, true);
+      } finally {
+        model.endUpdate();
+      }
+    }
+
     onMounted(() => refreshFromSelection());
 
     /**
@@ -651,6 +695,7 @@ export default {
       applyText,
       applyFields,
       refreshFromSelection,
+      deleteSelected,
       defaultHints,
       shapeTypeOptions,
       arrowStyleOptions,

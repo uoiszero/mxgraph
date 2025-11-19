@@ -37,10 +37,6 @@ export default {
 
     /**
      * initGraph
-     * 初始化 mxGraph 图形实例并启用常用交互
-     */
-    /**
-     * initGraph
      * 初始化 mxGraph 并启用常用交互与撤销管理
      */
     function initGraph() {
@@ -94,6 +90,51 @@ export default {
      */
     function getGraph() {
       return graphRef.value;
+    }
+
+    /**
+     * deleteSelection
+     * 删除当前选中的图形；支持清理由侧栏创建的隐形端点
+     */
+    function deleteSelection(evt) {
+      if (!graph) return;
+      try {
+        if (evt) mxEvent.consume(evt);
+      } catch (e) {}
+      if (graph.isEditing()) return;
+      const model = graph.getModel();
+      const selected = graph.getSelectionCells();
+      if (!selected || selected.length === 0) return;
+      const toRemove = selected.slice();
+      for (let i = 0; i < selected.length; i++) {
+        const c = selected[i];
+        if (model.isEdge(c)) {
+          const s = model.getTerminal(c, true);
+          const t = model.getTerminal(c, false);
+          const terms = [s, t];
+          for (let j = 0; j < terms.length; j++) {
+            const term = terms[j];
+            if (!term) continue;
+            const style = model.getStyle(term) || "";
+            const isInvisiblePoint =
+              style.indexOf("shape=point") !== -1 &&
+              style.indexOf("fillColor=none") !== -1 &&
+              style.indexOf("strokeColor=none") !== -1;
+            if (isInvisiblePoint) {
+              const deg = model.getEdgeCount(term);
+              const hasChildren = model.getChildCount(term) > 0;
+              if (deg <= 1 && !hasChildren) toRemove.push(term);
+            }
+          }
+        }
+      }
+      const topmost = model.getTopmostCells(toRemove);
+      model.beginUpdate();
+      try {
+        graph.removeCells(topmost, true);
+      } finally {
+        model.endUpdate();
+      }
     }
 
     /**
@@ -179,8 +220,8 @@ export default {
         return mxEvent.isControlDown(evt) || (mxClient.IS_MAC && evt.metaKey);
       };
       const bind = function (code, control, fn, shift) {
-        const f = function () {
-          fn();
+        const f = function (evt) {
+          fn(evt);
         };
         if (control) {
           if (shift) keyHandler.bindControlShiftKey(code, f);
@@ -193,9 +234,12 @@ export default {
       bind(90, true, undo); // Ctrl/Cmd+Z
       if (!mxClient.IS_WIN) bind(90, true, redo, true); // Ctrl/Cmd+Shift+Z
       else bind(89, true, redo); // Ctrl+Y on Windows
+      bind(46, false, deleteSelection); // Delete
+      bind(8, false, deleteSelection); // Backspace
 
       graph.undo = undo;
       graph.redo = redo;
+      graph.deleteSelection = deleteSelection;
     }
 
     /**
@@ -214,6 +258,23 @@ export default {
         let state = cell && graph.view.getState(cell);
         let style = state && state.style;
         let isEdge = !!cell && graph.getModel().isEdge(cell);
+        // 若命中的是端点（隐形 point 顶点），则取其连接的边
+        if (!isEdge && cell && graph.getModel().isVertex(cell)) {
+          const s0 = graph.getModel().getStyle(cell) || "";
+          const looksPoint =
+            s0.indexOf("shape=point") !== -1 ||
+            (s0.indexOf("fillColor=none") !== -1 &&
+              s0.indexOf("strokeColor=none") !== -1);
+          if (looksPoint) {
+            const edges = graph.getModel().getConnections(cell) || [];
+            if (edges.length > 0) {
+              cell = edges[0];
+              state = graph.view.getState(cell);
+              style = state && state.style;
+              isEdge = true;
+            }
+          }
+        }
         // 若仍未命中边，则尝试用当前选中的单条边
         if (!isEdge) {
           const sel = graph
@@ -369,7 +430,7 @@ export default {
       keyHandler = null;
     });
 
-    expose({ getGraph, undo, redo });
+    expose({ getGraph, undo, redo, deleteSelection });
     return { container, containerStyle };
   },
 };
