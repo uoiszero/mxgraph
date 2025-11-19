@@ -6,10 +6,23 @@
     <div class="row">
       <label>shape</label
       ><select v-model="shapeType">
-        <option value="connection">Connection</option>
-        <option value="link">Link</option>
-        <option value="flexArrow">Arrow</option>
-        <option value="arrow">Simple Arrow</option>
+        <option
+          v-for="item in shapeTypeOptions"
+          :key="item.value"
+          :value="item.value">
+          {{ item.label }}
+        </option>
+      </select>
+    </div>
+    <div class="row">
+      <label>Arrow Style</label>
+      <select v-model="arrowStyle">
+        <option
+          v-for="item in arrowStyleOptions"
+          :key="item.value"
+          :value="item.value">
+          {{ item.label }}
+        </option>
       </select>
     </div>
     <div class="row">
@@ -94,7 +107,7 @@
 </template>
 
 <script>
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, onMounted, onBeforeUnmount, computed, unref } from "vue";
 
 export default {
   name: "MxStyleEditor",
@@ -106,6 +119,7 @@ export default {
     const strokeColor = ref("");
     const lineType = ref("solid");
     const shapeType = ref("connection");
+    const arrowStyle = ref("endOnly");
     const startSize = ref(null);
     const endSize = ref(null);
     const startWidth = ref(null);
@@ -119,6 +133,42 @@ export default {
       startWidth: "",
       endWidth: "",
     });
+    const shapeTypeOptions = computed(() => [
+      {
+        label: "Connection",
+        value: "connection",
+      },
+      {
+        label: "Link",
+        value: "link",
+      },
+      {
+        label: "Arrow",
+        value: "flexArrow",
+      },
+      {
+        label: "Simple Arrow",
+        value: "arrow",
+      },
+    ]);
+    const arrowStyleOptions = computed(() => [
+      {
+        label: "无箭头",
+        value: "none",
+      },
+      {
+        label: "仅末端箭头",
+        value: "endOnly",
+      },
+      {
+        label: "仅起始箭头",
+        value: "startOnly",
+      },
+      {
+        label: "两端箭头",
+        value: "both",
+      },
+    ]);
 
     /**
      * getActiveGraph
@@ -191,9 +241,9 @@ export default {
         graph.view.getState(cell)?.style?.shape ||
         ""
       ).toString();
-      shapeType.value = ["connection", "link", "flexArrow", "arrow"].includes(
-        shapeName
-      )
+      shapeType.value = shapeTypeOptions.value
+        .map(({ value }) => value)
+        .includes(shapeName)
         ? shapeName || "connection"
         : "connection";
       startSize.value =
@@ -299,6 +349,105 @@ export default {
     }
 
     /**
+     * applyArrowStyle
+     * 应用箭头样式
+     * @param graph 图实例
+     * @param cells 选中单元
+     */
+    function setArrowStyle(graph, cells) {
+      // 首先将形状设置为 flexArrow
+      graph.setCellStyles(mxConstants.STYLE_SHAPE, "flexArrow", cells);
+      // 其次根据箭头样式来设置起始箭头和末端箭头
+      const _style = unref(arrowStyle);
+      if (_style === "none") {
+        graph.setCellStyles(
+          mxConstants.STYLE_STARTARROW,
+          mxConstants.NONE,
+          cells
+        );
+        graph.setCellStyles(
+          mxConstants.STYLE_ENDARROW,
+          mxConstants.NONE,
+          cells
+        );
+      } else if (_style === "startOnly") {
+        graph.setCellStyles(
+          mxConstants.STYLE_STARTARROW,
+          mxConstants.ARROW_BLOCK,
+          cells
+        );
+        graph.setCellStyles(
+          mxConstants.STYLE_ENDARROW,
+          mxConstants.NONE,
+          cells
+        );
+      } else if (_style === "endOnly") {
+        graph.setCellStyles(
+          mxConstants.STYLE_STARTARROW,
+          mxConstants.NONE,
+          cells
+        );
+        graph.setCellStyles(
+          mxConstants.STYLE_ENDARROW,
+          mxConstants.ARROW_BLOCK,
+          cells
+        );
+      } else {
+        graph.setCellStyles(
+          mxConstants.STYLE_STARTARROW,
+          mxConstants.ARROW_BLOCK,
+          cells
+        );
+        graph.setCellStyles(
+          mxConstants.STYLE_ENDARROW,
+          mxConstants.ARROW_BLOCK,
+          cells
+        );
+        // 其次根据箭头样式来
+      }
+    }
+
+    /**
+     * applyShapeStyle
+     * 应用形状样式
+     * @param graph 图实例
+     * @param cells 选中单元
+     */
+    function setShapeStyle(graph, cells) {
+      if (shapeType.value === "connection") {
+        graph.setCellStyles(mxConstants.STYLE_SHAPE, null, cells);
+        graph.setCellStyles(mxConstants.STYLE_STARTSIZE, null, cells);
+        graph.setCellStyles(mxConstants.STYLE_ENDSIZE, null, cells);
+        graph.setCellStyles("width", null, cells);
+        graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, null, cells);
+        graph.setCellStyles(mxConstants.STYLE_EDGE, null, cells);
+      } else if (
+        shapeType.value === "link" ||
+        shapeType.value === "flexArrow" ||
+        shapeType.value === "arrow"
+      ) {
+        graph.setCellStyles(mxConstants.STYLE_SHAPE, shapeType.value, cells);
+        graph.setCellStyles(mxConstants.STYLE_STARTSIZE, null, cells);
+        graph.setCellStyles(mxConstants.STYLE_ENDSIZE, null, cells);
+        graph.setCellStyles("width", null, cells);
+        if (shapeType.value === "flexArrow") {
+          graph.setCellStyles(
+            mxConstants.STYLE_ENDARROW,
+            mxConstants.ARROW_BLOCK,
+            cells
+          );
+          graph.setCellStyles(
+            mxConstants.STYLE_STARTARROW,
+            mxConstants.NONE,
+            cells
+          );
+          graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, "1", cells);
+          graph.setCellStyles(mxConstants.STYLE_EDGE, null, cells);
+        }
+      }
+    }
+
+    /**
      * applyFields
      * 以字段方式设置样式键，未设的键不改动
      */
@@ -311,50 +460,9 @@ export default {
       graph.getModel().beginUpdate();
       try {
         // 先应用 shape 类型选择
-        if (shapeType.value === "connection") {
-          graph.setCellStyles(mxConstants.STYLE_SHAPE, null, cells);
-          graph.setCellStyles(mxConstants.STYLE_STARTSIZE, null, cells);
-          graph.setCellStyles(mxConstants.STYLE_ENDSIZE, null, cells);
-          graph.setCellStyles("width", null, cells);
-          graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, null, cells);
-          graph.setCellStyles(mxConstants.STYLE_EDGE, null, cells);
-        } else if (
-          shapeType.value === "link" ||
-          shapeType.value === "flexArrow" ||
-          shapeType.value === "arrow"
-        ) {
-          graph.setCellStyles(mxConstants.STYLE_SHAPE, shapeType.value, cells);
-          graph.setCellStyles(mxConstants.STYLE_STARTSIZE, null, cells);
-          graph.setCellStyles(mxConstants.STYLE_ENDSIZE, null, cells);
-          graph.setCellStyles("width", null, cells);
-          if (shapeType.value === "flexArrow") {
-            graph.setCellStyles(
-              mxConstants.STYLE_ENDARROW,
-              mxConstants.ARROW_BLOCK,
-              cells
-            );
-            graph.setCellStyles(
-              mxConstants.STYLE_STARTARROW,
-              mxConstants.NONE,
-              cells
-            );
-            graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, "1", cells);
-            graph.setCellStyles(mxConstants.STYLE_EDGE, null, cells);
-          }
-        }
-        // 当用户设置 width 且当前形状不是支持 width 的形状（flexArrow/link），自动转换为 flexArrow
-        if (width.value != null) {
-          const needsShape = cells.some(c => {
-            const s = graph.getModel().getStyle(c) || "";
-            const shape = s.match(/(^|;)shape=([^;]+)/)?.[2] || "";
-            return shape !== "flexArrow" && shape !== "link";
-          });
-          if (needsShape) {
-            graph.setCellStyles(mxConstants.STYLE_SHAPE, "flexArrow", cells);
-            graph.setCellStyles(mxConstants.STYLE_NOEDGESTYLE, "1", cells);
-            graph.setCellStyles(mxConstants.STYLE_EDGE, null, cells);
-          }
-        }
+        setShapeStyle(graph, cells);
+        // 再应用箭头样式
+        setArrowStyle(graph, cells);
         const _width = normalizePositiveInt(width.value);
         if (_width != null) graph.setCellStyles("width", String(_width), cells);
         const _sw = normalizePositiveInt(strokeWidth.value);
@@ -432,6 +540,7 @@ export default {
       styleText,
       width,
       shapeType,
+      arrowStyle,
       strokeWidth,
       strokeColor,
       lineType,
@@ -445,6 +554,8 @@ export default {
       applyFields,
       refreshFromSelection,
       defaultHints,
+      shapeTypeOptions,
+      arrowStyleOptions,
     };
   },
 };
