@@ -107,7 +107,15 @@
 </template>
 
 <script>
-import { ref, onMounted, onBeforeUnmount, computed, unref } from "vue";
+import {
+  ref,
+  onMounted,
+  onBeforeUnmount,
+  computed,
+  unref,
+  inject,
+  watch,
+} from "vue";
 
 export default {
   name: "MxStyleEditor",
@@ -133,6 +141,8 @@ export default {
       startWidth: "",
       endWidth: "",
     });
+    const injectedGetter = inject("getGraph", null);
+    const injectedGraphRef = inject("mxGraph", null);
     const shapeTypeOptions = computed(() => [
       {
         label: "Connection",
@@ -174,6 +184,10 @@ export default {
      * getActiveGraph
      * 获取当前 mxGraph 实例
      */
+    /**
+     * getActiveGraph
+     * 获取当前 mxGraph 实例（优先使用 props/inject，再回退全局）
+     */
     function getActiveGraph() {
       if (typeof props.getGraph === "function") {
         try {
@@ -181,6 +195,14 @@ export default {
           if (g) return g;
         } catch (e) {}
       }
+      if (typeof injectedGetter === "function") {
+        try {
+          const g = injectedGetter();
+          if (g) return g;
+        } catch (e) {}
+      }
+      if (injectedGraphRef && injectedGraphRef.value)
+        return injectedGraphRef.value;
       if (typeof window !== "undefined" && window.__lastGraphRef)
         return window.__lastGraphRef();
       return null;
@@ -554,6 +576,10 @@ export default {
      * bindSelectionListener
      * 绑定图形选中事件（SelectionModel CHANGE），自动读取并展示样式参数
      */
+    /**
+     * bindSelectionListener
+     * 绑定图形选中事件（SelectionModel CHANGE），自动读取并展示样式参数
+     */
     function bindSelectionListener() {
       const graph = getActiveGraph();
       if (!graph) return;
@@ -568,6 +594,38 @@ export default {
     onMounted(() => {
       bindSelectionListener();
     });
+
+    /**
+     * ensureSelectionBinding
+     * 监听图实例就绪/切换，确保成功绑定选中事件并进行一次初始刷新
+     */
+    function ensureSelectionBinding() {
+      const graph = getActiveGraph();
+      if (!graph) return;
+      // 若尚未绑定，则绑定并刷新一次
+      if (!selectionListener.value) {
+        bindSelectionListener();
+        refreshFromSelection();
+      }
+    }
+
+    // 监听注入的图引用变化，图初始化后自动绑定
+    if (injectedGraphRef) {
+      watch(
+        () => injectedGraphRef.value,
+        () => {
+          ensureSelectionBinding();
+        }
+      );
+    } else {
+      // 回退：定时检查一次，避免注入缺失但全局引用稍后就绪的情况
+      const probe = setInterval(() => {
+        if (getActiveGraph()) {
+          ensureSelectionBinding();
+          clearInterval(probe);
+        }
+      }, 300);
+    }
 
     onBeforeUnmount(() => {
       const graph = getActiveGraph();
