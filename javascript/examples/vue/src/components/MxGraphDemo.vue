@@ -30,7 +30,7 @@ import {
   MxStencilSidebar,
   MxEditDialog,
   MxStyleEditor
-} from "../../../VueComponents/index.js";
+} from "mxgraph-vue";
 
 export default {
   name: "MxGraphDemo",

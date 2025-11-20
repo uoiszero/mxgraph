@@ -27,7 +27,7 @@ export function ensureMxClient({
           return resolve();
         const geRel = new URL("../vendor/ge/Shapes.js", import.meta.url).href;
         const geCandidates = [geRel];
-        if (typeof window !== "undefined" && !window.Graph) window.Graph = {};
+        // 仅在 Graph 已存在时尝试加载 Grapheditor 的扩展；避免创建空 Graph 导致脚本假定其完整实现
         const tryLoad = i => {
           if (i >= geCandidates.length) return resolve();
           const ss = document.createElement("script");
@@ -74,9 +74,7 @@ export function ensureMxClient({
         const geCandidates = [geRel];
         const loadGe = i => {
           if (i >= geCandidates.length) return resolve();
-          if (typeof window !== "undefined" && !window.Graph) {
-            window.Graph = {};
-          }
+          // 只有在已有 Graph 环境时才加载 Grapheditor 扩展脚本
           const ss = document.createElement("script");
           ss.src = geCandidates[i];
           ss.async = true;

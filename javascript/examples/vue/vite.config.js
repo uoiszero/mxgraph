@@ -10,6 +10,9 @@ const componentsDir = path.resolve(__dirname, '../VueComponents')
 
 export default defineConfig({
   plugins: [vue()],
+  optimizeDeps: {
+    exclude: ["mxgraph-vue"],
+  },
   server: {
     fs: {
       allow: [mxSrc, projectRoot, stencilsDir, componentsDir]
@@ -17,7 +20,8 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src')
+      '@': path.resolve(__dirname, './src'),
+      'mxgraph-vue': path.resolve(__dirname, '../VueComponents/index.js')
     }
   }
 })
