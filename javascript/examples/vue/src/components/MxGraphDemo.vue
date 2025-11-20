@@ -51,16 +51,25 @@ export default {
       showEditor.value = true;
     }
 
+    function beginUpdate() {
+      if (!graph) return;
+      graph.getModel().beginUpdate();
+    }
+
+    function endUpdate() {
+      if (!graph) return;
+      graph.getModel().endUpdate();
+    }
+
     /**
      * 清空并重建画布
      */
     function resetGraph() {
-      if (!graph) return;
-      graph.getModel().beginUpdate();
+      beginUpdate();
       try {
         graph.removeCells(graph.getChildVertices(graph.getDefaultParent()));
       } finally {
-        graph.getModel().endUpdate();
+        endUpdate();
       }
     }
 
@@ -68,9 +77,8 @@ export default {
      * 添加示例节点与连线
      */
     function addSample() {
-      if (!graph) return;
+      beginUpdate();
       const parent = graph.getDefaultParent();
-      graph.getModel().beginUpdate();
       try {
         const a = graph.insertVertex(parent, null, "A", 60, 220, 60, 30);
         const b = graph.insertVertex(parent, null, "B", 160, 220, 60, 30);
@@ -78,7 +86,7 @@ export default {
         graph.insertEdge(parent, null, "", a, b);
         graph.insertEdge(parent, null, "", b, c);
       } finally {
-        graph.getModel().endUpdate();
+        endUpdate();
       }
     }
 
