@@ -48,8 +48,8 @@ export default {
       const el = container.value;
       el.innerHTML = "";
       graph = new mxGraph(el);
-      rubberband = new mxRubberband(graph);
-      new mxCellTracker(graph);
+      rubberband = new window.mxRubberband(graph);
+      new window.mxCellTracker(graph);
       graph.setPanning(true);
       graph.panningHandler.useLeftButtonForPanning = false;
       graph.setConnectable(true);
@@ -143,7 +143,7 @@ export default {
      * 创建并连接撤销管理器到模型与视图事件
      */
     function setupUndoManager(graph) {
-      undoManager = new mxUndoManager();
+      undoManager = new window.mxUndoManager();
       const listener = function (sender, evt) {
         undoManager.undoableEditHappened(evt.getProperty("edit"));
       };
