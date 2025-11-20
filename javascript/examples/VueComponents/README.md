@@ -1,4 +1,4 @@
-# mxgraph VueComponents 组件库
+# mxGraph Vue 组件库
 
 > 基于 mxGraph 的 Vue 3 组件封装，包含画布、图形素材侧栏、样式编辑器和 XML 编辑对话框，便于在 Vue 应用中快速构建可交互的图编辑体验。
 
