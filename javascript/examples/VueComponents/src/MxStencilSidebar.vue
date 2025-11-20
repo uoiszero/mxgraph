@@ -397,11 +397,25 @@ export default {
     let thumbGraph = null;
 
     // 为每个分组预建一个响应式数组，避免 Map 非响应导致不更新
+    /**
+     * resolveStencilUrl
+     * 解析组件内置 stencil 的绝对地址；优先使用 import.meta.url，失败则根据样式链接反推包根路径
+     */
+    function resolveStencilUrl(name) {
+      try {
+        return new URL("../stencils/" + name, import.meta.url).href;
+      } catch (e) {}
+      const styleEl =
+        typeof document !== "undefined" && document.getElementById("mxgraph-vue-style");
+      const styleHref = styleEl && typeof styleEl.href === "string" ? styleEl.href : null;
+      const pkgRoot = styleHref ? styleHref.replace(/\/?dist\/index\.css.*$/, "") : "";
+      return pkgRoot ? pkgRoot + "/stencils/" + name : "";
+    }
     const defaultStencilUrls = () => {
-      const basic = new URL("../stencils/basic.xml", import.meta.url).href;
-      const flow = new URL("../stencils/flowchart.xml", import.meta.url).href;
-      const arrows = new URL("../stencils/arrows.xml", import.meta.url).href;
-      const bpmn = new URL("../stencils/bpmn.xml", import.meta.url).href;
+      const basic = resolveStencilUrl("basic.xml");
+      const flow = resolveStencilUrl("flowchart.xml");
+      const arrows = resolveStencilUrl("arrows.xml");
+      const bpmn = resolveStencilUrl("bpmn.xml");
       return [
         { key: "basic", title: "基础图形", url: basic },
         { key: "flowchart", title: "流程图", url: flow },
@@ -449,12 +463,18 @@ export default {
         openKey.value = firstNonEmpty.key;
       }
       const compRelBase = new URL("../stencils/", import.meta.url).href;
+      const styleEl =
+        typeof document !== "undefined" && document.getElementById("mxgraph-vue-style");
+      const styleHref = styleEl && typeof styleEl.href === "string" ? styleEl.href : null;
+      const pkgRoot = styleHref ? styleHref.replace(/\/?dist\/index\.css.*$/, "") : "";
       for (const g of groupsState) {
         if (!g.url) continue;
         if (g.items.length > 0) continue;
         const name = g.url.split("/").pop();
         if (!name) continue;
-        await loadStencilSetAndEnumerate(compRelBase + name, g.items);
+        let url = compRelBase + name;
+        if (!url && pkgRoot) url = pkgRoot + "/stencils/" + name;
+        await loadStencilSetAndEnumerate(url, g.items);
       }
       const firstNonEmpty2 = groupsState.find(g => g.items.length > 0);
       if (firstNonEmpty2) openKey.value = firstNonEmpty2.key;

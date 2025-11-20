@@ -52,7 +52,20 @@ export function ensureMxClient({
       "../vendor/mxgraph/js/mxClient.js",
       import.meta.url
     ).href;
-    const tryUrls = [mxClientUrl, mxClientRel].filter(Boolean);
+    // 备用：通过自动注入的样式链接反推出包根路径，构造 vendor 的绝对地址
+    let styleHref = null;
+    const styleEl = document.getElementById("mxgraph-vue-style");
+    if (styleEl && typeof styleEl.href === "string") styleHref = styleEl.href;
+    let pkgRoot = null;
+    if (styleHref) {
+      pkgRoot = styleHref.replace(/\/?dist\/index\.css.*$/, "");
+    }
+    const mxClientFromStyle = pkgRoot
+      ? pkgRoot + "/vendor/mxgraph/js/mxClient.js"
+      : null;
+    const tryUrls = [mxClientUrl, mxClientRel, mxClientFromStyle]
+      .filter(Boolean)
+      .filter((v, i, a) => a.indexOf(v) === i);
 
     const loadWithIndex = idx => {
       if (idx >= tryUrls.length) {
@@ -75,6 +88,7 @@ export function ensureMxClient({
         const loadGe = i => {
           if (i >= geCandidates.length) return resolve();
           // 只有在已有 Graph 环境时才加载 Grapheditor 扩展脚本
+          if (typeof window === "undefined" || !window.Graph) return resolve();
           const ss = document.createElement("script");
           ss.src = geCandidates[i];
           ss.async = true;
