@@ -118,7 +118,6 @@
     <div class="row actions">
       <button @click="applyText">应用文本</button>
       <button @click="applyFields">应用参数</button>
-      <button @click="refreshFromSelection">读取选中</button>
       <button @click="deleteSelected">删除选中</button>
     </div>
   </div>
@@ -791,6 +790,7 @@ textarea {
 }
 
 .style-text {
+  height: 90px;
   flex-direction: column;
   justify-content: flex-start;
   align-items: start;
