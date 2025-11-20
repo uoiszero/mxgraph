@@ -10,7 +10,10 @@
     .sidebar
       MxStencilSidebar(:getGraph="getGraph")
     .canvas
-      MxGraphCanvas(@ready="onReady")
+      MxGraphCanvas(
+        :height="640",
+        @ready="onReady"
+      )
     .inspector
       MxStyleEditor(:getGraph="getGraph")
   MxEditDialog(
@@ -163,12 +166,12 @@ export default {
   border: 1px solid #e5e7eb;
   border-radius: 6px;
   padding: 8px;
-  height: 480px;
+  height: 640px;
   overflow: auto;
 }
 .canvas {
   flex: 1;
-  height: 480px;
+  height: 640px;
   border: 1px dashed #cbd5e1;
 }
 .inspector {
@@ -176,7 +179,7 @@ export default {
   border: 1px solid #e5e7eb;
   border-radius: 6px;
   padding: 8px;
-  height: 480px;
+  height: 640px;
   overflow: auto;
 }
 button {
