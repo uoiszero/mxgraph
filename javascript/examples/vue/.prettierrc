@@ -1,0 +1,15 @@
+{
+  "plugins": ["@prettier/plugin-pug"],
+  "trailingComma": "none",
+  "semi": true,
+  "tabWidth": 2,
+  "singleQuote": false,
+  "bracketSpacing": true,
+  "bracketSameLine": true,
+  "arrowParens": "avoid",
+  "pugFramework": "vue",
+  "pugAttributeSeparator": "always",
+  "pugSortAttributes": "asc",
+  "pugWrapAttributesThreshold": 1,
+  "pugBracketSameLine": false
+}

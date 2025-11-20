@@ -13,7 +13,11 @@
       MxGraphCanvas(@ready="onReady")
     .inspector
       MxStyleEditor(:getGraph="getGraph")
-  MxEditDialog(:visible="showEditor" :getGraphFn="getGraph" @close="showEditor=false")
+  MxEditDialog(
+    :getGraphFn="getGraph",
+    :visible="showEditor",
+    @close="showEditor = false"
+  )
 </template>
 
 <script>
@@ -22,7 +26,7 @@ import {
   MxGraphCanvas,
   MxStencilSidebar,
   MxEditDialog,
-  MxStyleEditor,
+  MxStyleEditor
 } from "../../../VueComponents/index.js";
 
 export default {
@@ -54,10 +58,13 @@ export default {
     function beginUpdate() {
       if (!graph) return;
       graph.getModel().beginUpdate();
+      return true;
     }
 
     function endUpdate() {
-      if (!graph) return;
+      if (!graph) {
+        return false;
+      }
       graph.getModel().endUpdate();
     }
 
@@ -65,11 +72,12 @@ export default {
      * 清空并重建画布
      */
     function resetGraph() {
-      beginUpdate();
-      try {
-        graph.removeCells(graph.getChildVertices(graph.getDefaultParent()));
-      } finally {
-        endUpdate();
+      if (beginUpdate()) {
+        try {
+          graph.removeCells(graph.getChildVertices(graph.getDefaultParent()));
+        } finally {
+          endUpdate();
+        }
       }
     }
 
@@ -77,16 +85,17 @@ export default {
      * 添加示例节点与连线
      */
     function addSample() {
-      beginUpdate();
-      const parent = graph.getDefaultParent();
-      try {
-        const a = graph.insertVertex(parent, null, "A", 60, 220, 60, 30);
-        const b = graph.insertVertex(parent, null, "B", 160, 220, 60, 30);
-        const c = graph.insertVertex(parent, null, "C", 260, 220, 60, 30);
-        graph.insertEdge(parent, null, "", a, b);
-        graph.insertEdge(parent, null, "", b, c);
-      } finally {
-        endUpdate();
+      if (beginUpdate()) {
+        const parent = graph.getDefaultParent();
+        try {
+          const a = graph.insertVertex(parent, null, "A", 60, 220, 60, 30);
+          const b = graph.insertVertex(parent, null, "B", 160, 220, 60, 30);
+          const c = graph.insertVertex(parent, null, "C", 260, 220, 60, 30);
+          graph.insertEdge(parent, null, "", a, b);
+          graph.insertEdge(parent, null, "", b, c);
+        } finally {
+          endUpdate();
+        }
       }
     }
 
@@ -95,7 +104,9 @@ export default {
      * 调用画布撤销
      */
     function doUndo() {
-      if (!graph) return;
+      if (!graph) {
+        return;
+      }
       if (typeof graph.undo === "function") graph.undo();
     }
 
@@ -104,7 +115,9 @@ export default {
      * 调用画布重做
      */
     function doRedo() {
-      if (!graph) return;
+      if (!graph) {
+        return;
+      }
       if (typeof graph.redo === "function") graph.redo();
     }
 
@@ -124,9 +137,9 @@ export default {
       showEditor,
       openEditor,
       doUndo,
-      doRedo,
+      doRedo
     };
-  },
+  }
 };
 </script>
 
