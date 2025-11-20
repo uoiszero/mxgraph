@@ -64,6 +64,16 @@
       </select>
     </div>
     <div class="row">
+      <label>rotation</label>
+      <input
+        type="number"
+        step="1"
+        min="0"
+        max="360"
+        v-model.number="rotation"
+        placeholder="0-360" />
+    </div>
+    <div class="row">
       <label>startSize</label
       ><input
         type="number"
@@ -135,6 +145,7 @@ export default {
     const strokeColor = ref("");
     const lineType = ref("solid");
     const rounded = ref(false);
+    const rotation = ref(null);
     const shapeType = ref("connection");
     const arrowStyle = ref("endOnly");
     const startSize = ref(null);
@@ -337,6 +348,16 @@ export default {
       endWidth.value =
         o.endWidth != null ? Math.max(1, Math.round(Number(o.endWidth))) : null;
       fillColor.value = o.fillColor || "";
+      // 读取旋转角度（顶点有效）；若样式未显式设置则从状态读取
+      const st = graph.view.getState(cell)?.style || {};
+      const rotObj = o[mxConstants.STYLE_ROTATION];
+      const rotState = st[mxConstants.STYLE_ROTATION];
+      rotation.value =
+        rotObj != null
+          ? Math.round(Number(rotObj))
+          : rotState != null
+          ? Math.round(Number(rotState))
+          : null;
       refreshDefaultHints(graph, cell, o);
     }
 
@@ -404,6 +425,16 @@ export default {
     function normalizePositiveInt(v) {
       if (v == null || Number.isNaN(v)) return null;
       return Math.max(1, Math.round(Number(v)));
+    }
+
+    /**
+     * normalizeAngle360
+     * 将角度规范化到 0-360 区间
+     */
+    function normalizeAngle360(v) {
+      const a = Number(v);
+      if (Number.isNaN(a)) return 0;
+      return ((a % 360) + 360) % 360;
     }
 
     /**
@@ -583,6 +614,11 @@ export default {
             fillColor.value,
             cells
           );
+        // 应用旋转角度（顶点支持），未设置则跳过
+        if (rotation.value != null) {
+          const norm = normalizeAngle360(rotation.value);
+          graph.setCellStyles(mxConstants.STYLE_ROTATION, String(norm), cells);
+        }
       } finally {
         graph.getModel().endUpdate();
       }
@@ -706,6 +742,7 @@ export default {
       strokeColor,
       lineType,
       rounded,
+      rotation,
       startSize,
       endSize,
       startWidth,

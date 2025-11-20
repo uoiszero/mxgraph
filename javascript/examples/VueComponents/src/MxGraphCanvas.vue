@@ -58,6 +58,7 @@ export default {
 
       setupUndoManager(graph);
       createKeyHandler(graph);
+      enableRotationInteractions();
 
       if (props.initSample) {
         const parent = graph.getDefaultParent();
@@ -371,6 +372,49 @@ export default {
     }
 
     /**
+     * enableRotationInteractions
+     * 启用顶点旋转把手、实时预览，并支持单击旋转把手使选中图形顺时针旋转 90°
+     */
+    function enableRotationInteractions() {
+      // 允许显示旋转把手与动态预览，参考 grapheditor 配置
+      mxVertexHandler.prototype.rotationEnabled = true;
+      mxVertexHandler.prototype.manageSizers = true;
+      mxVertexHandler.prototype.livePreview = true;
+
+      // 自定义旋转把手的鼠标指针为“旋转”图标（使用内联 SVG 作为自定义 cursor）
+      try {
+        const svg =
+          '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="#fca000" d="M15.55 5.55L11 1v3.07C7.06 4.56 4 7.92 4 12s3.05 7.44 7 7.93v-2.02c-2.84-.48-5-2.94-5-5.91s2.16-5.43 5-5.91V10l4.55-4.45zM19.93 11c-.17-1.39-.72-2.73-1.62-3.89l-1.42 1.42c.54.75.88 1.6 1.02 2.47h2.02zM13 17.9v2.02c1.39-.17 2.74-.71 3.9-1.61l-1.44-1.44c-.75.54-1.59.89-2.46 1.03zm3.89-2.42l1.42 1.41c.9-1.16 1.45-2.5 1.62-3.89h-2.02c-.14.87-.48 1.72-1.02 2.48z"/></svg>';
+        const url = "data:image/svg+xml;utf8," + encodeURIComponent(svg);
+        // Hotspot 设置为图标居中（12,12）；尾备选为 crosshair
+        mxVertexHandler.prototype.rotationCursor = `url(${url}) 12 12, crosshair`;
+      } catch (e) {
+        mxVertexHandler.prototype.rotationCursor = "crosshair";
+      }
+
+      // 覆盖单击旋转把手的行为：顺时针旋转 90°
+      const origRotateClick = mxVertexHandler.prototype.rotateClick;
+      mxVertexHandler.prototype.rotateClick = function () {
+        try {
+          const current = Number(
+            mxUtils.getValue(this.state.style, mxConstants.STYLE_ROTATION, 0)
+          );
+          const next = (current + 90) % 360;
+          this.state.view.graph.setCellStyles(
+            mxConstants.STYLE_ROTATION,
+            next,
+            [this.state.cell]
+          );
+        } catch (e) {}
+        if (typeof origRotateClick === "function") {
+          try {
+            origRotateClick.apply(this, arguments);
+          } catch (e) {}
+        }
+      };
+    }
+
+    /**
      * enableVirtualHandlesForEdges
      * 启用边的虚拟手柄（位于相邻拐点中点），点击虚拟手柄直接添加一个拐点
      */
@@ -430,7 +474,44 @@ export default {
       keyHandler = null;
     });
 
-    expose({ getGraph, undo, redo, deleteSelection });
+    /**
+     * rotate90
+     * 将当前选中的顶点顺时针旋转 90°
+     */
+    function rotate90() {
+      const graph = graphRef.value;
+      if (!graph) return;
+      const cells = (graph.getSelectionCells() || []).filter(c =>
+        graph.getModel().isVertex(c)
+      );
+      if (!cells.length) return;
+      const style = graph.getCellStyle(cells[0]);
+      const current = Number(
+        mxUtils.getValue(style, mxConstants.STYLE_ROTATION, 0)
+      );
+      const next = (current + 90) % 360;
+      graph.setCellStyles(mxConstants.STYLE_ROTATION, next, cells);
+    }
+
+    /**
+     * setRotation
+     * 将当前选中的顶点旋转到指定角度（0-360）
+     * @param angle 目标角度
+     */
+    function setRotation(angle) {
+      const graph = graphRef.value;
+      if (!graph) return;
+      const cells = (graph.getSelectionCells() || []).filter(c =>
+        graph.getModel().isVertex(c)
+      );
+      if (!cells.length) return;
+      const a = Number(angle);
+      if (Number.isNaN(a)) return;
+      const norm = ((a % 360) + 360) % 360;
+      graph.setCellStyles(mxConstants.STYLE_ROTATION, norm, cells);
+    }
+
+    expose({ getGraph, undo, redo, deleteSelection, rotate90, setRotation });
     return { container, containerStyle };
   },
 };
