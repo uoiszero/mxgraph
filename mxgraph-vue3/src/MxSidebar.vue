@@ -303,7 +303,9 @@ export default {
         const suffix = styleSuffix || ";whiteSpace=wrap;html=1;";
         async function loadStencilSet(u) {
           try {
-            const resp = await fetch(u);
+            const base = (import.meta?.env?.BASE_URL || "/");
+            const full = base.replace(/\/$/, "/") + String(u).replace(/^\//, "");
+            const resp = await fetch(full);
             const text = await resp.text();
             const doc = mx.mxUtils.parseXml(text);
             const root = doc?.documentElement;
