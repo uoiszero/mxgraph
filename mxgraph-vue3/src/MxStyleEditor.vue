@@ -44,10 +44,7 @@
         :placeholder="defaultHints.strokeWidth" />
     </div>
     <div class="row">
-      <label>strokeColor</label
-      ><input
-        type="color"
-        v-model="strokeColor" />
+      <label>strokeColor</label><input type="color" v-model="strokeColor" />
     </div>
     <div class="row">
       <label>lineType</label
@@ -110,10 +107,7 @@
         :placeholder="defaultHints.endWidth" />
     </div>
     <div class="row">
-      <label>fillColor</label
-      ><input
-        type="color"
-        v-model="fillColor" />
+      <label>fillColor</label><input type="color" v-model="fillColor" />
     </div>
     <div class="row actions">
       <button @click="applyText">应用文本</button>
@@ -124,11 +118,22 @@
 </template>
 
 <script>
-import { ref, onMounted, onBeforeUnmount, computed, unref, inject, watch } from "vue";
+import {
+  ref,
+  onMounted,
+  onBeforeUnmount,
+  computed,
+  unref,
+  inject,
+  watch
+} from "vue";
 
 export default {
   name: "MxStyleEditor",
-  props: { mxGraph: { type: Object, default: null }, mx: { type: Object, default: null } },
+  props: {
+    mxGraph: { type: Object, default: null },
+    mx: { type: Object, default: null }
+  },
   setup(props) {
     const styleText = ref("");
     const width = ref(null);
@@ -150,50 +155,60 @@ export default {
       startSize: "",
       endSize: "",
       startWidth: "",
-      endWidth: "",
+      endWidth: ""
     });
-    const getGraph = ()=> props.mxGraph ?? injectedGraphRef.value ?? null;
+    const getGraph = () => props.mxGraph ?? injectedGraphRef.value ?? null;
     const injectedGetter = inject("getGraph", null);
     const injectedGraphRef = inject("mxGraph", null);
     const injectedMx = inject("mx", null);
     const mxLocal = ref(injectedMx ?? props.mx ?? null);
-    watch(() => props.mx, (v) => { mxLocal.value = v; });
-    watch(() => mxLocal.value, () => { ensureSelectionBinding(); });
+    watch(
+      () => props.mx,
+      v => {
+        mxLocal.value = v;
+      }
+    );
+    watch(
+      () => mxLocal.value,
+      () => {
+        ensureSelectionBinding();
+      }
+    );
     const shapeTypeOptions = computed(() => [
       {
         label: "Connection",
-        value: "connection",
+        value: "connection"
       },
       {
         label: "Link",
-        value: "link",
+        value: "link"
       },
       {
         label: "Arrow",
-        value: "flexArrow",
+        value: "flexArrow"
       },
       {
         label: "Simple Arrow",
-        value: "arrow",
-      },
+        value: "arrow"
+      }
     ]);
     const arrowStyleOptions = computed(() => [
       {
         label: "无箭头",
-        value: "none",
+        value: "none"
       },
       {
         label: "仅末端箭头",
-        value: "endOnly",
+        value: "endOnly"
       },
       {
         label: "仅起始箭头",
-        value: "startOnly",
+        value: "startOnly"
       },
       {
         label: "两端箭头",
-        value: "both",
-      },
+        value: "both"
+      }
     ]);
 
     /**
@@ -205,7 +220,7 @@ export default {
      * 获取当前 mxGraph 实例（优先使用 props/inject，再回退全局）
      */
     function getActiveGraph() {
-      if(typeof props.mxGraph !== "undefined"){
+      if (typeof props.mxGraph !== "undefined") {
         return props.mxGraph;
       }
       if (typeof injectedGetter === "function") {
@@ -307,7 +322,10 @@ export default {
         o.width != null ? Math.max(1, Math.round(Number(o.width))) : null;
       strokeWidth.value =
         o[mxLocal.value?.mxConstants.STYLE_STROKEWIDTH] != null
-          ? Math.max(1, Math.round(Number(o[mxLocal.value.mxConstants.STYLE_STROKEWIDTH])))
+          ? Math.max(
+              1,
+              Math.round(Number(o[mxLocal.value.mxConstants.STYLE_STROKEWIDTH]))
+            )
           : null;
       strokeColor.value = o[mxLocal.value?.mxConstants.STYLE_STROKECOLOR] || "";
       const dashedFlag =
@@ -335,11 +353,17 @@ export default {
       getArrowStyle(graph, o, cell);
       startSize.value =
         o[mxLocal.value?.mxConstants.STYLE_STARTSIZE] != null
-          ? Math.max(1, Math.round(Number(o[mxLocal.value.mxConstants.STYLE_STARTSIZE])))
+          ? Math.max(
+              1,
+              Math.round(Number(o[mxLocal.value.mxConstants.STYLE_STARTSIZE]))
+            )
           : null;
       endSize.value =
         o[mxLocal.value?.mxConstants.STYLE_ENDSIZE] != null
-          ? Math.max(1, Math.round(Number(o[mxLocal.value.mxConstants.STYLE_ENDSIZE])))
+          ? Math.max(
+              1,
+              Math.round(Number(o[mxLocal.value.mxConstants.STYLE_ENDSIZE]))
+            )
           : null;
       startWidth.value =
         o.startWidth != null
@@ -356,8 +380,8 @@ export default {
         rotObj != null
           ? Math.round(Number(rotObj))
           : rotState != null
-          ? Math.round(Number(rotState))
-          : null;
+            ? Math.round(Number(rotState))
+            : null;
       refreshDefaultHints(graph, cell, o);
     }
 
@@ -404,7 +428,9 @@ export default {
         shapeName === "doubleArrow" ||
         shapeName === "singleArrow";
       defStartSize = String(
-        isArrowFamily ? mxLocal.value?.mxConstants.ARROW_SIZE : mxLocal.value?.mxConstants.DEFAULT_MARKERSIZE
+        isArrowFamily
+          ? mxLocal.value?.mxConstants.ARROW_SIZE
+          : mxLocal.value?.mxConstants.DEFAULT_MARKERSIZE
       );
       defEndSize = defStartSize;
 
@@ -414,7 +440,7 @@ export default {
         startSize: defStartSize,
         endSize: defEndSize,
         startWidth: defStartWidth,
-        endWidth: defEndWidth,
+        endWidth: defEndWidth
       };
     }
 
@@ -463,21 +489,57 @@ export default {
      */
     function setArrowStyle(graph, cells) {
       // 首先将形状设置为 flexArrow
-      graph.setCellStyles(mxLocal.value.mxConstants.STYLE_SHAPE, "flexArrow", cells);
+      graph.setCellStyles(
+        mxLocal.value.mxConstants.STYLE_SHAPE,
+        "flexArrow",
+        cells
+      );
       // 其次根据箭头样式来设置起始箭头和末端箭头
       const _style = unref(arrowStyle);
       if (_style === "none") {
-        graph.setCellStyles(mxLocal.value.mxConstants.STYLE_STARTARROW, mxLocal.value.mxConstants.NONE, cells);
-        graph.setCellStyles(mxLocal.value.mxConstants.STYLE_ENDARROW, mxLocal.value.mxConstants.NONE, cells);
+        graph.setCellStyles(
+          mxLocal.value.mxConstants.STYLE_STARTARROW,
+          mxLocal.value.mxConstants.NONE,
+          cells
+        );
+        graph.setCellStyles(
+          mxLocal.value.mxConstants.STYLE_ENDARROW,
+          mxLocal.value.mxConstants.NONE,
+          cells
+        );
       } else if (_style === "startOnly") {
-        graph.setCellStyles(mxLocal.value.mxConstants.STYLE_STARTARROW, mxLocal.value.mxConstants.ARROW_BLOCK, cells);
-        graph.setCellStyles(mxLocal.value.mxConstants.STYLE_ENDARROW, mxLocal.value.mxConstants.NONE, cells);
+        graph.setCellStyles(
+          mxLocal.value.mxConstants.STYLE_STARTARROW,
+          mxLocal.value.mxConstants.ARROW_BLOCK,
+          cells
+        );
+        graph.setCellStyles(
+          mxLocal.value.mxConstants.STYLE_ENDARROW,
+          mxLocal.value.mxConstants.NONE,
+          cells
+        );
       } else if (_style === "endOnly") {
-        graph.setCellStyles(mxLocal.value.mxConstants.STYLE_STARTARROW, mxLocal.value.mxConstants.NONE, cells);
-        graph.setCellStyles(mxLocal.value.mxConstants.STYLE_ENDARROW, mxLocal.value.mxConstants.ARROW_BLOCK, cells);
+        graph.setCellStyles(
+          mxLocal.value.mxConstants.STYLE_STARTARROW,
+          mxLocal.value.mxConstants.NONE,
+          cells
+        );
+        graph.setCellStyles(
+          mxLocal.value.mxConstants.STYLE_ENDARROW,
+          mxLocal.value.mxConstants.ARROW_BLOCK,
+          cells
+        );
       } else {
-        graph.setCellStyles(mxLocal.value.mxConstants.STYLE_STARTARROW, mxLocal.value.mxConstants.ARROW_BLOCK, cells);
-        graph.setCellStyles(mxLocal.value.mxConstants.STYLE_ENDARROW, mxLocal.value.mxConstants.ARROW_BLOCK, cells);
+        graph.setCellStyles(
+          mxLocal.value.mxConstants.STYLE_STARTARROW,
+          mxLocal.value.mxConstants.ARROW_BLOCK,
+          cells
+        );
+        graph.setCellStyles(
+          mxLocal.value.mxConstants.STYLE_ENDARROW,
+          mxLocal.value.mxConstants.ARROW_BLOCK,
+          cells
+        );
         // 其次根据箭头样式来
       }
     }
@@ -492,25 +554,65 @@ export default {
       const _type = unref(shapeType);
       if (_type === "connection") {
         graph.setCellStyles(mxLocal.value.mxConstants.STYLE_SHAPE, null, cells);
-        graph.setCellStyles(mxLocal.value.mxConstants.STYLE_STARTSIZE, null, cells);
-        graph.setCellStyles(mxLocal.value.mxConstants.STYLE_ENDSIZE, null, cells);
+        graph.setCellStyles(
+          mxLocal.value.mxConstants.STYLE_STARTSIZE,
+          null,
+          cells
+        );
+        graph.setCellStyles(
+          mxLocal.value.mxConstants.STYLE_ENDSIZE,
+          null,
+          cells
+        );
         graph.setCellStyles("width", null, cells);
-        graph.setCellStyles(mxLocal.value.mxConstants.STYLE_NOEDGESTYLE, null, cells);
+        graph.setCellStyles(
+          mxLocal.value.mxConstants.STYLE_NOEDGESTYLE,
+          null,
+          cells
+        );
         graph.setCellStyles(mxLocal.value.mxConstants.STYLE_EDGE, null, cells);
       } else if (
         _type === "link" ||
         _type === "flexArrow" ||
         _type === "arrow"
       ) {
-        graph.setCellStyles(mxLocal.value.mxConstants.STYLE_SHAPE, _type, cells);
-        graph.setCellStyles(mxLocal.value.mxConstants.STYLE_STARTSIZE, null, cells);
-        graph.setCellStyles(mxLocal.value.mxConstants.STYLE_ENDSIZE, null, cells);
+        graph.setCellStyles(
+          mxLocal.value.mxConstants.STYLE_SHAPE,
+          _type,
+          cells
+        );
+        graph.setCellStyles(
+          mxLocal.value.mxConstants.STYLE_STARTSIZE,
+          null,
+          cells
+        );
+        graph.setCellStyles(
+          mxLocal.value.mxConstants.STYLE_ENDSIZE,
+          null,
+          cells
+        );
         graph.setCellStyles("width", null, cells);
         if (_type === "flexArrow") {
-          graph.setCellStyles(mxLocal.value.mxConstants.STYLE_ENDARROW, mxLocal.value.mxConstants.ARROW_BLOCK, cells);
-          graph.setCellStyles(mxLocal.value.mxConstants.STYLE_STARTARROW, mxLocal.value.mxConstants.NONE, cells);
-          graph.setCellStyles(mxLocal.value.mxConstants.STYLE_NOEDGESTYLE, "1", cells);
-          graph.setCellStyles(mxLocal.value.mxConstants.STYLE_EDGE, null, cells);
+          graph.setCellStyles(
+            mxLocal.value.mxConstants.STYLE_ENDARROW,
+            mxLocal.value.mxConstants.ARROW_BLOCK,
+            cells
+          );
+          graph.setCellStyles(
+            mxLocal.value.mxConstants.STYLE_STARTARROW,
+            mxLocal.value.mxConstants.NONE,
+            cells
+          );
+          graph.setCellStyles(
+            mxLocal.value.mxConstants.STYLE_NOEDGESTYLE,
+            "1",
+            cells
+          );
+          graph.setCellStyles(
+            mxLocal.value.mxConstants.STYLE_EDGE,
+            null,
+            cells
+          );
         }
       }
     }
@@ -537,29 +639,61 @@ export default {
         if (_width != null) graph.setCellStyles("width", String(_width), cells);
         const _sw = normalizePositiveInt(strokeWidth.value);
         if (_sw != null)
-          graph.setCellStyles(mxLocal.value.mxConstants.STYLE_STROKEWIDTH, String(_sw), cells);
+          graph.setCellStyles(
+            mxLocal.value.mxConstants.STYLE_STROKEWIDTH,
+            String(_sw),
+            cells
+          );
         if (strokeColor.value)
-          graph.setCellStyles(mxLocal.value.mxConstants.STYLE_STROKECOLOR, strokeColor.value, cells);
+          graph.setCellStyles(
+            mxLocal.value.mxConstants.STYLE_STROKECOLOR,
+            strokeColor.value,
+            cells
+          );
         if (lineType.value)
-          graph.setCellStyles(mxLocal.value.mxConstants.STYLE_DASHED, lineType.value === "dashed" ? "1" : null, cells);
-        graph.setCellStyles(mxLocal.value.mxConstants.STYLE_ROUNDED, rounded.value ? "1" : null, cells);
+          graph.setCellStyles(
+            mxLocal.value.mxConstants.STYLE_DASHED,
+            lineType.value === "dashed" ? "1" : null,
+            cells
+          );
+        graph.setCellStyles(
+          mxLocal.value.mxConstants.STYLE_ROUNDED,
+          rounded.value ? "1" : null,
+          cells
+        );
         const _ss = normalizePositiveInt(startSize.value);
         if (_ss != null)
-          graph.setCellStyles(mxLocal.value.mxConstants.STYLE_STARTSIZE, String(_ss), cells);
+          graph.setCellStyles(
+            mxLocal.value.mxConstants.STYLE_STARTSIZE,
+            String(_ss),
+            cells
+          );
         const _es = normalizePositiveInt(endSize.value);
         if (_es != null)
-          graph.setCellStyles(mxLocal.value.mxConstants.STYLE_ENDSIZE, String(_es), cells);
+          graph.setCellStyles(
+            mxLocal.value.mxConstants.STYLE_ENDSIZE,
+            String(_es),
+            cells
+          );
         const _stw = normalizePositiveInt(startWidth.value);
         if (_stw != null)
           graph.setCellStyles("startWidth", String(_stw), cells);
         const _enw = normalizePositiveInt(endWidth.value);
         if (_enw != null) graph.setCellStyles("endWidth", String(_enw), cells);
         if (fillColor.value)
-          graph.setCellStyles(mxLocal.value.mxConstants.STYLE_FILLCOLOR, fillColor.value, cells);
+          graph.setCellStyles(
+            mxLocal.value.mxConstants.STYLE_FILLCOLOR,
+            fillColor.value,
+            cells
+          );
         // 应用旋转角度（顶点支持），未设置则跳过
         if (rotation.value != null) {
           const norm = normalizeAngle360(rotation.value);
-          graph.setCellStyles(mxLocal.value.mxConstants.STYLE_ROTATION, String(norm), cells);
+          graph.setCellStyles(
+            mxLocal.value.mxConstants.STYLE_ROTATION,
+            String(norm),
+            cells
+          );
         }
       } finally {
         graph.getModel().endUpdate();
@@ -636,7 +770,9 @@ export default {
         refreshFromSelection();
       };
       if (!mxLocal.value) return;
-      graph.getSelectionModel().addListener(mxLocal.value.mxEvent.CHANGE, listener);
+      graph
+        .getSelectionModel()
+        .addListener(mxLocal.value.mxEvent.CHANGE, listener);
       selectionListener.value = listener;
     }
 
@@ -710,7 +846,7 @@ export default {
       arrowStyleOptions,
       getGraph
     };
-  },
+  }
 };
 </script>
 
@@ -738,8 +874,9 @@ label {
 textarea {
   width: 100%;
   height: 100px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-    "Liberation Mono", "Courier New", monospace;
+  font-family:
+    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
+    "Courier New", monospace;
   font-size: 12px;
 }
 

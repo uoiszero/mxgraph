@@ -124,7 +124,6 @@ function initGraph() {
   provide("mxGraph", graphRef);
   provide("mx", mx);
 
-
   graph.addListener(mxEvent.CLICK, (sender, evt) => {
     const cell = evt.getProperty("cell");
     emit("click", { cell, evt });
