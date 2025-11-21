@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>mxgraph-vue3 组件开发调试</title>
+    <style>
+      body { font-family: -apple-system, system-ui, Arial; }
+      .toolbar { display: flex; gap: 8px; padding: 12px; border-bottom: 1px solid #e5e7eb; }
+      .container { padding: 12px; }
+      .btn { padding: 6px 10px; border: 1px solid #d1d5db; border-radius: 6px; background: #f3f4f6; cursor: pointer; }
+      .btn:hover { background: #e5e7eb; }
+      .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      .card { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; }
+      .card-header { padding: 8px 12px; background: #f9fafb; border-bottom: 1px solid #e5e7eb; font-weight: 600; }
+      .card-body { padding: 12px; }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module">
+      import { createApp, ref, onMounted } from 'vue'
+      import Plugin, { MxGraph } from './src/index.js'
+
+      /**
+       * 返回演示用的初始顶点与边
+       * @returns {Array}
+       */
+      function getDemoCells() {
+        return [
+          { type: 'vertex', id: 'a', label: 'A', x: 20, y: 20, w: 80, h: 30 },
+          { type: 'vertex', id: 'b', label: 'B', x: 220, y: 150, w: 80, h: 30 },
+          { type: 'vertex', id: 'c', label: 'C', x: 380, y: 60, w: 80, h: 30 },
+          { type: 'edge', id: 'e1', source: 'a', target: 'b', label: 'A → B' },
+          { type: 'edge', id: 'e2', source: 'b', target: 'c', label: 'B → C' }
+        ]
+      }
+
+      /**
+       * 初始化图的运行时设置
+       * @param {any} graph mxGraph 实例
+       * @param {any} mx mx 命名空间对象
+       * @returns {void}
+       */
+      function initRuntime(graph, mx) {
+        graph.setPanning(true)
+        graph.setConnectable(true)
+        graph.setAllowDanglingEdges(false)
+        graph.panningHandler.useLeftButtonForPanning = true
+        const style = graph.getStylesheet().getDefaultVertexStyle()
+        style[mx.mxConstants.STYLE_ROUNDED] = 1
+        style[mx.mxConstants.STYLE_FONTSIZE] = 12
+      }
+
+      const App = {
+        components: { MxGraph },
+        template: `
+          <div class="toolbar">
+            <button class="btn" @click="addVertex">添加顶点</button>
+            <button class="btn" @click="connectRandom">随机连线</button>
+            <button class="btn" @click="applyTreeLayout">树形布局</button>
+            <button class="btn" @click="zoomIn">放大</button>
+            <button class="btn" @click="zoomOut">缩小</button>
+            <button class="btn" @click="fit">自适应</button>
+            <button class="btn" @click="clearGraph">清空</button>
+            <button class="btn" @click="toggleReadonly">切换只读：{{ readonly ? '开' : '关' }}</button>
+          </div>
+          <div class="container">
+            <div class="grid">
+              <div class="card">
+                <div class="card-header">基础示例</div>
+                <div class="card-body">
+                  <MxGraph ref="mxRef" :cells="cells" :height="420" :readOnly="readonly" @ready="onReady" @click="onClick" @change="onChange" />
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-header">只读 + 框选</div>
+                <div class="card-body">
+                  <MxGraph :cells="cells" :height="420" :readOnly="true" :rubberband="true" />
+                </div>
+              </div>
+            </div>
+          </div>
+        `,
+        setup() {
+          const mxRef = ref(null)
+          const cells = ref(getDemoCells())
+          const readonly = ref(false)
+          let graph = null
+          let mx = null
+
+          /**
+           * ready 事件：保存实例并初始化运行时设置
+           * @param {{graph:any, mx:any}} payload
+           * @returns {void}
+           */
+          function onReady(payload) {
+            graph = payload.graph
+            mx = payload.mx
+            initRuntime(graph, mx)
+            console.log('ready', { graph, mx })
+          }
+
+          /**
+           * click 事件：打印当前点击的单元格
+           * @param {{cell:any, evt:any}} payload
+           * @returns {void}
+           */
+          function onClick(payload) {
+            console.log('click', payload.cell)
+          }
+
+          /**
+           * change 事件：打印模型变更
+           * @param {any} model
+           * @returns {void}
+           */
+          function onChange(model) {
+            console.log('model changed', model)
+          }
+
+          /**
+           * 向图中添加一个顶点
+           * @returns {void}
+           */
+          function addVertex() {
+            if (!graph) return
+            const parent = graph.getDefaultParent()
+            const x = Math.floor(Math.random() * 300) + 40
+            const y = Math.floor(Math.random() * 200) + 40
+            graph.getModel().beginUpdate()
+            try {
+              graph.insertVertex(parent, `v_${Date.now()}`, 'New', x, y, 80, 30)
+            } finally {
+              graph.getModel().endUpdate()
+            }
+          }
+
+          /**
+           * 随机选择两个顶点并连接
+           * @returns {void}
+           */
+          function connectRandom() {
+            if (!graph) return
+            const parent = graph.getDefaultParent()
+            const verts = graph.getChildVertices(parent)
+            if (verts.length < 2) return
+            const i = Math.floor(Math.random() * verts.length)
+            let j = Math.floor(Math.random() * verts.length)
+            if (j === i) j = (j + 1) % verts.length
+            graph.getModel().beginUpdate()
+            try {
+              graph.insertEdge(parent, null, '', verts[i], verts[j])
+            } finally {
+              graph.getModel().endUpdate()
+            }
+          }
+
+          /**
+           * 应用树形布局（mxCompactTreeLayout）
+           * @returns {void}
+           */
+          function applyTreeLayout() {
+            if (!graph || !mx) return
+            const parent = graph.getDefaultParent()
+            const layout = new mx.mxCompactTreeLayout(graph, false)
+            layout.execute(parent)
+          }
+
+          /**
+           * 放大视图
+           * @returns {void}
+           */
+          function zoomIn() {
+            if (!graph) return
+            graph.zoomIn()
+          }
+
+          /**
+           * 缩小视图
+           * @returns {void}
+           */
+          function zoomOut() {
+            if (!graph) return
+            graph.zoomOut()
+          }
+
+          /**
+           * 视图适配容器
+           * @returns {void}
+           */
+          function fit() {
+            if (!graph) return
+            graph.fit()
+          }
+
+          /**
+           * 清空图内容
+           * @returns {void}
+           */
+          function clearGraph() {
+            if (!graph) return
+            graph.getModel().clear()
+          }
+
+          /**
+           * 切换只读模式
+           * @returns {void}
+           */
+          function toggleReadonly() {
+            readonly.value = !readonly.value
+            if (graph) graph.setEnabled(!readonly.value)
+          }
+
+          onMounted(() => {
+            // 如果需要通过 ref 获取暴露的实例方法
+            // const exposed = mxRef.value
+            // console.log('exposed', exposed)
+          })
+
+          return {
+            mxRef,
+            cells,
+            readonly,
+            onReady,
+            onClick,
+            onChange,
+            addVertex,
+            connectRandom,
+            applyTreeLayout,
+            zoomIn,
+            zoomOut,
+            fit,
+            clearGraph,
+            toggleReadonly
+          }
+        }
+      }
+
+      createApp(App).use(Plugin).mount('#app')
+    </script>
+  </body>
+  </html>
