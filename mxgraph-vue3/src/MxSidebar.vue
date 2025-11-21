@@ -1,36 +1,68 @@
 <template>
   <div class="sidebar">
     <div class="palette">
-      <div class="palette-title">General</div>
-      <div class="items" ref="basicItems"></div>
+      <div class="palette-title" @click="toggleGroup('general')">General</div>
+      <div
+        class="items"
+        ref="basicItems"
+        v-show="expandedGroup === 'general'"></div>
     </div>
     <div class="palette">
-      <div class="palette-title">Misc</div>
-      <div class="items" ref="miscItems"></div>
+      <div class="palette-title" @click="toggleGroup('misc')">Misc</div>
+      <div
+        class="items"
+        ref="miscItems"
+        v-show="expandedGroup === 'misc'"></div>
     </div>
     <div class="palette">
-      <div class="palette-title">Advanced</div>
-      <div class="items" ref="advancedItems"></div>
+      <div class="palette-title" @click="toggleGroup('advanced')">Advanced</div>
+      <div
+        class="items"
+        ref="advancedItems"
+        v-show="expandedGroup === 'advanced'"></div>
     </div>
     <div class="palette">
-      <div class="palette-title">连线</div>
-      <div class="items" ref="edgeItems"></div>
+      <div class="palette-title" @click="toggleGroup('edge')">连线</div>
+      <div
+        class="items"
+        ref="edgeItems"
+        v-show="expandedGroup === 'edge'"></div>
     </div>
     <div class="palette">
-      <div class="palette-title">Basic (stencils)</div>
-      <div class="items" ref="basicStencilItems"></div>
+      <div class="palette-title" @click="toggleGroup('basicStencils')">
+        Basic (stencils)
+      </div>
+      <div
+        class="items"
+        ref="basicStencilItems"
+        v-show="expandedGroup === 'basicStencils'"></div>
     </div>
     <div class="palette">
-      <div class="palette-title">Flowchart (stencils)</div>
-      <div class="items" ref="flowchartItems"></div>
+      <div class="palette-title" @click="toggleGroup('flowchart')">
+        Flowchart (stencils)
+      </div>
+      <div
+        class="items"
+        ref="flowchartItems"
+        v-show="expandedGroup === 'flowchart'"></div>
     </div>
     <div class="palette">
-      <div class="palette-title">BPMN (stencils)</div>
-      <div class="items" ref="bpmnItems"></div>
+      <div class="palette-title" @click="toggleGroup('bpmn')">
+        BPMN (stencils)
+      </div>
+      <div
+        class="items"
+        ref="bpmnItems"
+        v-show="expandedGroup === 'bpmn'"></div>
     </div>
     <div class="palette">
-      <div class="palette-title">Arrows (stencils)</div>
-      <div class="items" ref="arrowsItems"></div>
+      <div class="palette-title" @click="toggleGroup('arrows')">
+        Arrows (stencils)
+      </div>
+      <div
+        class="items"
+        ref="arrowsItems"
+        v-show="expandedGroup === 'arrows'"></div>
     </div>
   </div>
 </template>
@@ -58,6 +90,17 @@ export default {
     const flowchartItems = ref(null);
     const bpmnItems = ref(null);
     const arrowsItems = ref(null);
+
+    const expandedGroup = ref("general");
+
+    /**
+     * toggleGroup
+     * 切换指定分组的展开/折叠状态，保证同时仅有一个分组展开
+     * @param {string} key 分组标识
+     */
+    function toggleGroup(key) {
+      expandedGroup.value = expandedGroup.value === key ? null : key;
+    }
 
     /**
      * getActiveGraph
@@ -303,8 +346,9 @@ export default {
         const suffix = styleSuffix || ";whiteSpace=wrap;html=1;";
         async function loadStencilSet(u) {
           try {
-            const base = (import.meta?.env?.BASE_URL || "/");
-            const full = base.replace(/\/$/, "/") + String(u).replace(/^\//, "");
+            const base = import.meta?.env?.BASE_URL || "/";
+            const full =
+              base.replace(/\/$/, "/") + String(u).replace(/^\//, "");
             const resp = await fetch(full);
             const text = await resp.text();
             const doc = mx.mxUtils.parseXml(text);
@@ -371,7 +415,9 @@ export default {
       basicStencilItems,
       flowchartItems,
       bpmnItems,
-      arrowsItems
+      arrowsItems,
+      expandedGroup,
+      toggleGroup
     };
   }
 };
@@ -390,6 +436,15 @@ export default {
   font-weight: 600;
   font-size: 13px;
   margin-bottom: 6px;
+  background: #f8fafc;
+  padding: 6px 4px;
+  border: 1px solid #e5e7eb;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+.palette-title:hover {
+  cursor: pointer;
+  background: #f1f5f9;
 }
 .items {
   display: grid;
