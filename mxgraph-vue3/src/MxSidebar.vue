@@ -147,7 +147,11 @@ export default {
         }
         if (typeof src === "object") {
           // 处理传入的 ref/computed
-          if ("value" in src && src.value && typeof src.value.getDefaultParent === "function") {
+          if (
+            "value" in src &&
+            src.value &&
+            typeof src.value.getDefaultParent === "function"
+          ) {
             return src.value;
           }
           if (typeof src.getDefaultParent === "function") return src;
@@ -368,7 +372,8 @@ export default {
               edgeStyle2
             );
             // 预置两个 waypoint，立即可见并可拖动
-            const geo = e.geometry != null ? e.geometry.clone() : new mxGeometry();
+            const geo =
+              e.geometry != null ? e.geometry.clone() : new mxGeometry();
             geo.points = [
               new mxPoint(pt.x, pt.y - 24),
               new mxPoint(pt.x, pt.y + 24)
@@ -599,17 +604,15 @@ export default {
   background: #f1f5f9;
 }
 .items {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   user-select: none;
 }
 :deep(.item) {
   display: grid;
-  grid-template-rows: auto 20px;
   justify-items: center;
   align-items: center;
-  padding: 6px 8px;
   border: 1px dashed #cbd5e1;
   border-radius: 4px;
   background: #fff;
@@ -619,7 +622,6 @@ export default {
 :deep(.thumb) {
   display: block;
   background: #fafafa;
-  border: 1px solid #e5e7eb;
   border-radius: 4px;
   overflow: hidden;
   user-select: none;
