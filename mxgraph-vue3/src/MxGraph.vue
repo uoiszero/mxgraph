@@ -43,6 +43,7 @@ function initMx() {
     mxForceIncludes: false,
     mxResourceExtension: ".txt"
   });
+  registerFlexArrow(mx);
 }
 
 /**
@@ -113,6 +114,10 @@ function initGraph() {
   const { mxGraph, mxRubberband, mxEvent } = mx;
   graph = new mxGraph(container.value);
   graph.setEnabled(!props.readOnly);
+  // 启用可连接与平移，提升拖拽连线与交互体验
+  graph.setConnectable(true);
+  graph.setPanning(true);
+  graph.panningHandler.useLeftButtonForPanning = true;
   if (props.rubberband) new mxRubberband(graph);
 
   renderCells();
@@ -148,6 +153,59 @@ function getGraph() {
  */
 function getMx() {
   return mx;
+}
+
+/**
+ * 注册 FlexArrow 形状，使其在画布上正确按照 width/startWidth/endWidth 绘制厚箭头
+ * @param {any} mxns mx 命名空间对象
+ * @returns {void}
+ */
+function registerFlexArrow(mxns) {
+  const { mxUtils, mxArrowConnector, mxCellRenderer } = mxns;
+
+  /**
+   * FlexArrowShape 构造函数
+   * @constructor
+   */
+  function FlexArrowShape() {
+    mxArrowConnector.call(this);
+    this.spacing = 0;
+  }
+
+  mxUtils.extend(FlexArrowShape, mxArrowConnector);
+
+  /**
+   * 获取箭身基础宽度（厚度）
+   * @returns {number}
+   */
+  FlexArrowShape.prototype.getEdgeWidth = function () {
+    const base = mxUtils.getNumber(this.style, "width", 10);
+    return base + Math.max(0, this.strokewidth - 1);
+  };
+
+  /**
+   * 获取起始端箭头宽度
+   * @returns {number}
+   */
+  FlexArrowShape.prototype.getStartArrowWidth = function () {
+    const extra = mxUtils.getNumber(this.style, "startWidth", 20);
+    return this.getEdgeWidth() + extra;
+  };
+
+  /**
+   * 获取末端箭头宽度
+   * @returns {number}
+   */
+  FlexArrowShape.prototype.getEndArrowWidth = function () {
+    const extra = mxUtils.getNumber(this.style, "endWidth", 20);
+    return this.getEdgeWidth() + extra;
+  };
+
+  /**
+   * 注册形状到渲染器
+   * @returns {void}
+   */
+  mxCellRenderer.registerShape("flexArrow", FlexArrowShape);
 }
 
 /**

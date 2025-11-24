@@ -22,7 +22,7 @@
 </template>
 
 <script>
-import { ref, inject, watch } from "vue";
+import { ref, inject, watch, onMounted } from "vue";
 
 export default {
   name: "MxToolbar",
@@ -32,7 +32,8 @@ export default {
   },
   setup(props) {
     const injectedGetter = inject("getGraph", null);
-    const injectedGraphRef = inject("mxGraph", null);
+    // 使用 ref(null) 作为注入的默认值，避免 watch 传入 null 引发 Vue 警告
+    const injectedGraphRef = inject("mxGraph", ref(null));
     const injectedMx = inject("mx", null);
     const mxLocal = ref(injectedMx ?? props.mx ?? null);
     watch(
@@ -44,6 +45,7 @@ export default {
 
     const fileInput = ref(null);
     let undoMgr = null;
+    let boundGraph = null;
 
     /**
      * getActiveGraph
@@ -67,11 +69,14 @@ export default {
      * 确保为图绑定撤销管理器
      */
     function ensureUndoManager() {
+      console.log("in ensureUndoManager");
       const graph = getActiveGraph();
+      console.log("ensureUndoManager", graph);
       if (!graph || !mxLocal.value) return;
-      if (undoMgr) return;
+      if (undoMgr && boundGraph === graph) return;
       const { mxUndoManager, mxEvent } = mxLocal.value;
       undoMgr = new mxUndoManager();
+      boundGraph = graph;
       const undoListener = function (sender, evt) {
         const edit = evt.getProperty("edit");
         undoMgr.undoableEditHappened(edit);
@@ -266,6 +271,22 @@ export default {
       const g = getActiveGraph();
       if (g) g.zoomActual();
     }
+
+    onMounted(() => {
+      ensureUndoManager();
+    });
+
+    // 监听注入的图引用变化（确保来源是有效的 ref），自动绑定撤销管理器
+    watch(injectedGraphRef, () => {
+      ensureUndoManager();
+    });
+
+    watch(
+      () => props.mxGraph,
+      () => {
+        ensureUndoManager();
+      }
+    );
 
     return {
       fileInput,

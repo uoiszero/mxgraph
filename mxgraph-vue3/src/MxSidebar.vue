@@ -107,7 +107,22 @@ export default {
      * 获取当前 mxGraph 实例
      */
     function getActiveGraph() {
-      if (props.mxGraph) return props.mxGraph;
+      const src = props.mxGraph;
+      if (src) {
+        if (typeof src === "function") {
+          try {
+            const g = src();
+            if (g && typeof g.getDefaultParent === "function") return g;
+          } catch (e) {}
+        }
+        if (typeof src === "object") {
+          // 处理传入的 ref/computed
+          if ("value" in src && src.value && typeof src.value.getDefaultParent === "function") {
+            return src.value;
+          }
+          if (typeof src.getDefaultParent === "function") return src;
+        }
+      }
       if (typeof injectedGetter === "function") {
         try {
           const v = injectedGetter();
@@ -219,16 +234,24 @@ export default {
         edgeItems.value.appendChild(item);
 
         const g = createThumbGraph(thumb);
-        g.view.scale = 0.6;
+        g.view.scale = 0.75;
         const parent = g.getDefaultParent();
-        const edge = new mxCell(
-          "",
-          new mxGeometry(),
-          style || "edgeStyle=orthogonalEdgeStyle;rounded=0;"
-        );
+        // 规范化样式：对 flexArrow 默认补充 noEdgeStyle 与 width
+        let edgeStyle = style || "edgeStyle=orthogonalEdgeStyle;rounded=0;";
+        if (edgeStyle.indexOf("shape=flexArrow") !== -1) {
+          if (edgeStyle.indexOf("noEdgeStyle=") === -1) {
+            edgeStyle += "noEdgeStyle=1;";
+          }
+          if (edgeStyle.indexOf("width=") === -1) {
+            edgeStyle += "width=14;";
+          }
+        }
+        const edge = new mxCell("", new mxGeometry(), edgeStyle);
         edge.setEdge(true);
         edge.geometry.setTerminalPoint(new mxPoint(10, 20), true);
         edge.geometry.setTerminalPoint(new mxPoint(30, 20), false);
+        // 默认添加一个中间 waypoint，便于在缩略图中观察厚度/控制点
+        edge.geometry.points = [new mxPoint(20, 12)];
         g.getModel().beginUpdate();
         try {
           g.addCell(edge, parent);
@@ -239,20 +262,61 @@ export default {
         const createEdge = (graphTarget, evt) => {
           const pt = graphTarget.getPointForEvent(evt);
           const parentTarget = graphTarget.getDefaultParent();
-          const e = new mxCell(
-            "",
-            new mxGeometry(),
-            style || "edgeStyle=orthogonalEdgeStyle;rounded=0;"
-          );
-          e.setEdge(true);
-          e.geometry.setTerminalPoint(new mxPoint(pt.x - 40, pt.y), true);
-          e.geometry.setTerminalPoint(new mxPoint(pt.x + 40, pt.y), false);
-          graphTarget.getModel().beginUpdate();
-          try {
-            graphTarget.addCell(e, parentTarget);
-          } finally {
-            graphTarget.getModel().endUpdate();
+          // 规范化样式（与缩略图一致），确保 flexArrow 默认显式宽度
+          let edgeStyle2 = style || "edgeStyle=orthogonalEdgeStyle;rounded=0;";
+          if (edgeStyle2.indexOf("shape=flexArrow") !== -1) {
+            if (edgeStyle2.indexOf("noEdgeStyle=") === -1) {
+              edgeStyle2 += "noEdgeStyle=1;";
+            }
+            if (edgeStyle2.indexOf("width=") === -1) {
+              edgeStyle2 += "width=14;";
+            }
           }
+          const pStyle = "shape=point;fillColor=none;strokeColor=none;";
+          const model = graphTarget.getModel();
+          model.beginUpdate();
+          let e;
+          try {
+            const s = graphTarget.insertVertex(
+              parentTarget,
+              null,
+              "",
+              pt.x - 48,
+              pt.y,
+              1,
+              1,
+              pStyle
+            );
+            const t = graphTarget.insertVertex(
+              parentTarget,
+              null,
+              "",
+              pt.x + 48,
+              pt.y,
+              1,
+              1,
+              pStyle
+            );
+            e = graphTarget.insertEdge(
+              parentTarget,
+              null,
+              "",
+              s,
+              t,
+              edgeStyle2
+            );
+            // 预置两个 waypoint，立即可见并可拖动
+            const geo = e.geometry != null ? e.geometry.clone() : new mxGeometry();
+            geo.points = [
+              new mxPoint(pt.x, pt.y - 24),
+              new mxPoint(pt.x, pt.y + 24)
+            ];
+            model.setGeometry(e, geo);
+          } finally {
+            model.endUpdate();
+          }
+          graphTarget.setSelectionCell(e);
+          graphTarget.scrollCellToVisible(e);
         };
         const bindEdge = () => {
           const gr = getActiveGraph();
@@ -337,9 +401,33 @@ export default {
 
       addEdgeItem("直线", "edgeStyle=straight;");
       addEdgeItem("折线", "edgeStyle=orthogonalEdgeStyle;");
+      /**
+       * Flex Arrow 示例：末端箭头，使用默认宽度与端宽
+       */
       addEdgeItem(
-        "箭头",
-        `${mxConstants.STYLE_SHAPE}=flexArrow;${mxConstants.STYLE_ENDARROW}=${mxConstants.ARROW_BLOCK};`
+        "Flex Arrow（末端）",
+        `${mxConstants.STYLE_SHAPE}=flexArrow;noEdgeStyle=1;fillColor=#60a5fa;strokeColor=#1e3a8a;${mxConstants.STYLE_ENDARROW}=${mxConstants.ARROW_BLOCK};`
+      );
+      /**
+       * Flex Arrow 示例：两端箭头
+       */
+      addEdgeItem(
+        "Flex Arrow（两端）",
+        `${mxConstants.STYLE_SHAPE}=flexArrow;noEdgeStyle=1;fillColor=#34d399;strokeColor=#065f46;${mxConstants.STYLE_STARTARROW}=${mxConstants.ARROW_BLOCK};${mxConstants.STYLE_ENDARROW}=${mxConstants.ARROW_BLOCK};`
+      );
+      /**
+       * Flex Arrow 示例：仅起始箭头
+       */
+      addEdgeItem(
+        "Flex Arrow（起始）",
+        `${mxConstants.STYLE_SHAPE}=flexArrow;noEdgeStyle=1;fillColor=#fb7185;strokeColor=#7f1d1d;${mxConstants.STYLE_STARTARROW}=${mxConstants.ARROW_BLOCK};${mxConstants.STYLE_ENDARROW}=${mxConstants.NONE};`
+      );
+      /**
+       * Flex Arrow 示例：自定义箭身厚度与端宽，圆角
+       */
+      addEdgeItem(
+        "Flex Arrow（自定义）",
+        `${mxConstants.STYLE_SHAPE}=flexArrow;noEdgeStyle=1;width=16;startWidth=24;endWidth=16;rounded=1;fillColor=#a78bfa;strokeColor=#4c1d95;${mxConstants.STYLE_STARTARROW}=${mxConstants.ARROW_BLOCK};${mxConstants.STYLE_ENDARROW}=${mxConstants.ARROW_BLOCK};`
       );
 
       function addStencilPalette(containerEl, url, styleSuffix) {
