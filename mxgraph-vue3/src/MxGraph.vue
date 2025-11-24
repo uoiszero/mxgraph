@@ -357,12 +357,16 @@ function registerFlexArrow(mxns) {
                 state.style,
                 mxConstants.STYLE_STARTSIZE,
                 mxConstants.ARROW_SIZE / 5
-              ) * 3 * state.view.scale;
+              ) *
+              3 *
+              state.view.scale;
             return new mxns.mxPoint(
-              p0.x + nx * (l + state.shape.strokewidth * state.view.scale) +
-                ny * w / 2,
-              p0.y + ny * (l + state.shape.strokewidth * state.view.scale) -
-                nx * w / 2
+              p0.x +
+                nx * (l + state.shape.strokewidth * state.view.scale) +
+                (ny * w) / 2,
+              p0.y +
+                ny * (l + state.shape.strokewidth * state.view.scale) -
+                (nx * w) / 2
             );
           },
           function (dist, nx, ny, p0, p1, pt, me) {
@@ -378,7 +382,8 @@ function registerFlexArrow(mxns) {
               pt.y
             );
             state.style[mxConstants.STYLE_STARTSIZE] =
-              Math.round((l - state.shape.strokewidth) * 100 / 3) / 100 /
+              Math.round(((l - state.shape.strokewidth) * 100) / 3) /
+              100 /
               state.view.scale;
             state.style["width"] = Math.round(w * 2) / state.view.scale;
             if (mxns.mxEvent.isControlDown(me.getEvent())) {
@@ -390,7 +395,8 @@ function registerFlexArrow(mxns) {
                 Math.abs(
                   parseFloat(state.style[mxConstants.STYLE_STARTSIZE]) -
                     parseFloat(state.style[mxConstants.STYLE_ENDSIZE])
-                ) < tol / 6
+                ) <
+                tol / 6
               ) {
                 state.style[mxConstants.STYLE_STARTSIZE] =
                   state.style[mxConstants.STYLE_ENDSIZE];
@@ -419,12 +425,16 @@ function registerFlexArrow(mxns) {
                 state.style,
                 mxConstants.STYLE_STARTSIZE,
                 mxConstants.ARROW_SIZE / 5
-              ) * 3 * state.view.scale;
+              ) *
+              3 *
+              state.view.scale;
             return new mxns.mxPoint(
-              p0.x + nx * (l + state.shape.strokewidth * state.view.scale) +
-                ny * w / 2,
-              p0.y + ny * (l + state.shape.strokewidth * state.view.scale) -
-                nx * w / 2
+              p0.x +
+                nx * (l + state.shape.strokewidth * state.view.scale) +
+                (ny * w) / 2,
+              p0.y +
+                ny * (l + state.shape.strokewidth * state.view.scale) -
+                (nx * w) / 2
             );
           },
           function (dist, nx, ny, p0, p1, pt, me) {
@@ -440,7 +450,8 @@ function registerFlexArrow(mxns) {
               pt.y
             );
             state.style[mxConstants.STYLE_STARTSIZE] =
-              Math.round((l - state.shape.strokewidth) * 100 / 3) / 100 /
+              Math.round(((l - state.shape.strokewidth) * 100) / 3) /
+              100 /
               state.view.scale;
             state.style["startWidth"] =
               Math.max(0, Math.round(w * 2) - state.shape.getEdgeWidth()) /
@@ -455,7 +466,8 @@ function registerFlexArrow(mxns) {
                 Math.abs(
                   parseFloat(state.style[mxConstants.STYLE_STARTSIZE]) -
                     parseFloat(state.style[mxConstants.STYLE_ENDSIZE])
-                ) < tol / 6
+                ) <
+                tol / 6
               ) {
                 state.style[mxConstants.STYLE_STARTSIZE] =
                   state.style[mxConstants.STYLE_ENDSIZE];
@@ -495,12 +507,16 @@ function registerFlexArrow(mxns) {
                 state.style,
                 mxConstants.STYLE_ENDSIZE,
                 mxConstants.ARROW_SIZE / 5
-              ) * 3 * state.view.scale;
+              ) *
+              3 *
+              state.view.scale;
             return new mxns.mxPoint(
-              p0.x + nx * (l + state.shape.strokewidth * state.view.scale) -
-                ny * w / 2,
-              p0.y + ny * (l + state.shape.strokewidth * state.view.scale) +
-                nx * w / 2
+              p0.x +
+                nx * (l + state.shape.strokewidth * state.view.scale) -
+                (ny * w) / 2,
+              p0.y +
+                ny * (l + state.shape.strokewidth * state.view.scale) +
+                (nx * w) / 2
             );
           },
           function (dist, nx, ny, p0, p1, pt, me) {
@@ -516,7 +532,8 @@ function registerFlexArrow(mxns) {
               pt.y
             );
             state.style[mxConstants.STYLE_ENDSIZE] =
-              Math.round((l - state.shape.strokewidth) * 100 / 3) / 100 /
+              Math.round(((l - state.shape.strokewidth) * 100) / 3) /
+              100 /
               state.view.scale;
             state.style["width"] = Math.round(w * 2) / state.view.scale;
             if (mxns.mxEvent.isControlDown(me.getEvent())) {
@@ -528,7 +545,8 @@ function registerFlexArrow(mxns) {
                 Math.abs(
                   parseFloat(state.style[mxConstants.STYLE_ENDSIZE]) -
                     parseFloat(state.style[mxConstants.STYLE_STARTSIZE])
-                ) < tol / 6
+                ) <
+                tol / 6
               ) {
                 state.style[mxConstants.STYLE_ENDSIZE] =
                   state.style[mxConstants.STYLE_STARTSIZE];
@@ -557,12 +575,16 @@ function registerFlexArrow(mxns) {
                 state.style,
                 mxConstants.STYLE_ENDSIZE,
                 mxConstants.ARROW_SIZE / 5
-              ) * 3 * state.view.scale;
+              ) *
+              3 *
+              state.view.scale;
             return new mxns.mxPoint(
-              p0.x + nx * (l + state.shape.strokewidth * state.view.scale) -
-                ny * w / 2,
-              p0.y + ny * (l + state.shape.strokewidth * state.view.scale) +
-                nx * w / 2
+              p0.x +
+                nx * (l + state.shape.strokewidth * state.view.scale) -
+                (ny * w) / 2,
+              p0.y +
+                ny * (l + state.shape.strokewidth * state.view.scale) +
+                (nx * w) / 2
             );
           },
           function (dist, nx, ny, p0, p1, pt, me) {
@@ -578,7 +600,8 @@ function registerFlexArrow(mxns) {
               pt.y
             );
             state.style[mxConstants.STYLE_ENDSIZE] =
-              Math.round((l - state.shape.strokewidth) * 100 / 3) / 100 /
+              Math.round(((l - state.shape.strokewidth) * 100) / 3) /
+              100 /
               state.view.scale;
             state.style["endWidth"] =
               Math.max(0, Math.round(w * 2) - state.shape.getEdgeWidth()) /
@@ -593,7 +616,8 @@ function registerFlexArrow(mxns) {
                 Math.abs(
                   parseFloat(state.style[mxConstants.STYLE_ENDSIZE]) -
                     parseFloat(state.style[mxConstants.STYLE_STARTSIZE])
-                ) < tol / 6
+                ) <
+                tol / 6
               ) {
                 state.style[mxConstants.STYLE_ENDSIZE] =
                   state.style[mxConstants.STYLE_STARTSIZE];
@@ -619,7 +643,8 @@ function registerFlexArrow(mxns) {
    * 挂载到 EdgeHandler：根据形状返回对应自定义句柄集合
    * @returns {any[]|null}
    */
-  const edgeCreateCustomHandles = mxns.mxEdgeHandler.prototype.createCustomHandles;
+  const edgeCreateCustomHandles =
+    mxns.mxEdgeHandler.prototype.createCustomHandles;
   mxns.mxEdgeHandler.prototype.createCustomHandles = function () {
     const prev = edgeCreateCustomHandles
       ? edgeCreateCustomHandles.apply(this, arguments)
