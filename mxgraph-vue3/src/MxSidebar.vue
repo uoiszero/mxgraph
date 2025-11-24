@@ -208,15 +208,19 @@ export default {
         bindNoSelect(thumb);
 
         const g = createThumbGraph(thumb);
-        const scale = Math.min(
-          40 / Math.max(1, (Number(w) || 40) + 12),
-          40 / Math.max(1, (Number(h) || 40) + 12)
-        );
+        const W = Math.max(1, Number(w) || 40);
+        const H = Math.max(1, Number(h) || 40);
+        const margin = 6;
+        const innerW = 40 - margin * 2;
+        const innerH = 40 - margin * 2;
+        const scale = Math.min(innerW / W, innerH / H);
         if (!Number.isNaN(scale) && scale > 0) g.view.scale = scale;
+        const gx = (margin + (innerW - W * scale) / 2) / scale;
+        const gy = (margin + (innerH - H * scale) / 2) / scale;
         const parent = g.getDefaultParent();
         g.getModel().beginUpdate();
         try {
-          g.insertVertex(parent, null, "", 6, 6, w, h, style);
+          g.insertVertex(parent, null, "", gx, gy, w, h, style);
         } finally {
           g.getModel().endUpdate();
         }
@@ -282,7 +286,6 @@ export default {
         bindNoSelect(thumb);
 
         const g = createThumbGraph(thumb);
-        g.view.scale = 0.75;
         const parent = g.getDefaultParent();
         // 规范化样式：对 flexArrow 默认补充 noEdgeStyle 与 width
         let edgeStyle = style || "edgeStyle=orthogonalEdgeStyle;rounded=0;";
@@ -291,15 +294,26 @@ export default {
             edgeStyle += "noEdgeStyle=1;";
           }
           if (edgeStyle.indexOf("width=") === -1) {
-            edgeStyle += "width=14;";
+            edgeStyle += "width=4;";
           }
         }
         const edge = new mxCell("", new mxGeometry(), edgeStyle);
         edge.setEdge(true);
-        edge.geometry.setTerminalPoint(new mxPoint(10, 20), true);
-        edge.geometry.setTerminalPoint(new mxPoint(30, 20), false);
-        // 默认添加一个中间 waypoint，便于在缩略图中观察厚度/控制点
-        edge.geometry.points = [new mxPoint(20, 12)];
+        // 居中计算：在 40x40 的缩略图内按边距居中终点
+        const size = 40;
+        const margin = 6;
+        const innerW = size - margin * 2;
+        const innerH = size - margin * 2;
+        const L = Math.max(12, innerW - 4);
+        const startX = margin + (innerW - L) / 2;
+        const endX = startX + L;
+        const y = margin + innerH / 2;
+        edge.geometry.setTerminalPoint(new mxPoint(startX, y), true);
+        edge.geometry.setTerminalPoint(new mxPoint(endX, y), false);
+        // 添加一个轻微的中点偏移以展示厚度，同时保持居中
+        const midX = (startX + endX) / 2;
+        const dy = Math.min(6, innerH / 3);
+        edge.geometry.points = [new mxPoint(midX, y - dy)];
         g.getModel().beginUpdate();
         try {
           g.addCell(edge, parent);
@@ -317,7 +331,7 @@ export default {
               edgeStyle2 += "noEdgeStyle=1;";
             }
             if (edgeStyle2.indexOf("width=") === -1) {
-              edgeStyle2 += "width=14;";
+              edgeStyle2 += "width=4;";
             }
           }
           const pStyle = "shape=point;fillColor=none;strokeColor=none;";
