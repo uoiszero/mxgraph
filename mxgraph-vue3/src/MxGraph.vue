@@ -277,6 +277,15 @@ function registerFlexArrow(mxns) {
    * @param {Function} setPosition
    * @returns {any}
    */
+  /**
+   * 针对边的句柄封装，启用拖动过程与释放后的强制重绘
+   * @param {any} state
+   * @param {string[]} keys
+   * @param {boolean} start 是否为起点侧
+   * @param {Function} getPosition
+   * @param {Function} setPosition
+   * @returns {any}
+   */
   function createEdgeHandle(state, keys, start, getPosition, setPosition) {
     return createHandle(
       state,
@@ -290,7 +299,7 @@ function registerFlexArrow(mxns) {
         const p1 = start ? pts[1] : pts[n - 1];
         const dx = p1.x - p0.x;
         const dy = p1.y - p0.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
         const pt = getPosition.call(this, dist, dx / dist, dy / dist, p0, p1);
         return new mxns.mxPoint(pt.x / s - tr.x, pt.y / s - tr.y);
       },
@@ -303,10 +312,16 @@ function registerFlexArrow(mxns) {
         const p1 = start ? pts[1] : pts[n - 1];
         const dx = p1.x - p0.x;
         const dy = p1.y - p0.y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
         pt.x = (pt.x + tr.x) * s;
         pt.y = (pt.y + tr.y) * s;
         setPosition.call(this, dist, dx / dist, dy / dist, p0, p1, pt, me);
+      },
+      true,
+      true,
+      function () {
+        state.view.invalidate(state.cell);
+        state.view.validate();
       }
     );
   }
