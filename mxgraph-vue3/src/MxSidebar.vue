@@ -379,6 +379,7 @@ export default {
           }
           graphTarget.setSelectionCell(e);
           graphTarget.scrollCellToVisible(e);
+          graphTarget.refresh();
         };
         const bindEdge = () => {
           const gr = getActiveGraph();
