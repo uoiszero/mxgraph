@@ -194,7 +194,17 @@ export default {
       if (!basicItems.value || !edgeItems.value || !mx) return;
       const { mxUtils, mxCell, mxGeometry, mxPoint, mxConstants } = mx;
 
-      function addVertexItem(containerEl, label, w, h, style) {
+      /**
+       * addVertexItem
+       * 向指定容器添加一个顶点缩略图条目，并绑定拖拽创建行为
+       * @param {HTMLElement} containerEl 容器元素
+       * @param {string} label 标题（用于创建时默认文本）
+       * @param {number} w 宽度
+       * @param {number} h 高度
+       * @param {string} style 样式字符串
+       * @param {{valueThumb?: any, valueCreate?: any, attrs?: Record<string,string>}} [opts] 可选项
+       */
+      function addVertexItem(containerEl, label, w, h, style, opts) {
         const item = document.createElement("div");
         item.className = "item";
         const thumb = document.createElement("div");
@@ -224,7 +234,16 @@ export default {
         const parent = g.getDefaultParent();
         g.getModel().beginUpdate();
         try {
-          g.insertVertex(parent, null, "", gx, gy, w, h, style);
+          g.insertVertex(
+            parent,
+            null,
+            opts && "valueThumb" in opts ? opts.valueThumb : "",
+            gx,
+            gy,
+            w,
+            h,
+            style
+          );
         } finally {
           g.getModel().endUpdate();
         }
@@ -244,13 +263,20 @@ export default {
             v = graphTarget.insertVertex(
               parentTarget,
               null,
-              label,
+              opts && "valueCreate" in opts ? opts.valueCreate : label,
               pt.x,
               pt.y,
               w,
               h,
               style
             );
+            if (opts && opts.attrs) {
+              try {
+                for (const k of Object.keys(opts.attrs)) {
+                  graphTarget.setAttributeForCell(v, k, String(opts.attrs[k]));
+                }
+              } catch (e) {}
+            }
           } finally {
             graphTarget.getModel().endUpdate();
           }
@@ -277,6 +303,12 @@ export default {
        * 添加连线缩略图项目，支持 flexArrow 缩略图按比例缩小 1/4
        * @param {string} label 标题
        * @param {string} style 边样式字符串
+       */
+      /**
+       * addEdgeItem
+       * 添加连线缩略图到 Edge 分组
+       * @param {string} label 标题
+       * @param {string} style 边样式
        */
       function addEdgeItem(label, style) {
         const item = document.createElement("div");
@@ -412,74 +444,229 @@ export default {
         }
       }
 
-      // General
-      addVertexItem(basicItems.value, "Rectangle", 80, 40, null);
-      addVertexItem(basicItems.value, "Rounded", 100, 50, "rounded=1;");
-      addVertexItem(
-        basicItems.value,
-        "Ellipse",
-        80,
-        50,
-        "shape=ellipse;perimeter=ellipsePerimeter;"
-      );
-      addVertexItem(
-        basicItems.value,
-        "Triangle",
-        80,
-        60,
-        "shape=triangle;perimeter=trianglePerimeter;"
-      );
-      addVertexItem(
-        basicItems.value,
-        "Rhombus",
-        80,
-        60,
-        "shape=rhombus;perimeter=rhombusPerimeter;"
-      );
-      addVertexItem(
-        basicItems.value,
-        "Hexagon",
-        100,
-        60,
-        "shape=hexagon;perimeter=hexagonPerimeter;"
-      );
-      addVertexItem(
-        basicItems.value,
-        "Swimlane",
-        140,
-        80,
-        "shape=swimlane;horizontal=1;childLayout=stackLayout;"
-      );
+      /**
+       * addEdgeItemTo
+       * 添加连线缩略图到指定分组容器
+       * @param {HTMLElement} containerEl 容器元素
+       * @param {string} label 标题
+       * @param {string} style 边样式
+       */
+      function addEdgeItemTo(containerEl, label, style) {
+        const item = document.createElement("div");
+        item.className = "item";
+        const thumb = document.createElement("div");
+        thumb.className = "thumb";
+        thumb.style.width = `40px`;
+        thumb.style.height = `40px`;
+        item.appendChild(thumb);
+        containerEl.appendChild(item);
 
-      // Misc
-      addVertexItem(miscItems.value, "Cylinder", 100, 60, "shape=cylinder;");
-      addVertexItem(miscItems.value, "Actor", 50, 70, "shape=actor;");
-      addVertexItem(miscItems.value, "Cloud", 100, 70, "shape=cloud;");
+        bindNoSelect(item);
+        bindNoSelect(thumb);
+
+        const g = createThumbGraph(thumb);
+        const parent = g.getDefaultParent();
+        let edgeStyle = style || "edgeStyle=orthogonalEdgeStyle;rounded=0;";
+        if (edgeStyle.indexOf("shape=flexArrow") !== -1) {
+          const scale = 0.25;
+          g.view.scale = scale;
+          if (edgeStyle.indexOf("noEdgeStyle=") === -1) edgeStyle += "noEdgeStyle=1;";
+          if (edgeStyle.indexOf("width=") === -1) edgeStyle += "width=14;";
+        }
+        const edge = new mxCell("", new mxGeometry(), edgeStyle);
+        edge.setEdge(true);
+        const size = 40;
+        const margin = 6;
+        const innerW = size - margin * 2;
+        const innerH = size - margin * 2;
+        const L = Math.max(12, innerW - 4);
+        const scaleApplied = g.view?.scale || 1;
+        const startX = (margin + (innerW - L) / 2) / scaleApplied;
+        const endX = startX + L / scaleApplied;
+        const y = (margin + innerH / 2) / scaleApplied;
+        edge.geometry.setTerminalPoint(new mxPoint(startX, y), true);
+        edge.geometry.setTerminalPoint(new mxPoint(endX, y), false);
+        const midX = (startX + endX) / 2;
+        const dy = Math.min(8, innerH / 3) / scaleApplied;
+        edge.geometry.points = [new mxPoint(midX, y - dy), new mxPoint(midX, y + dy)];
+        g.getModel().beginUpdate();
+        try { g.addCell(edge, parent); } finally { g.getModel().endUpdate(); }
+
+        const createEdge = (graphTarget, evt) => {
+          const pt = graphTarget.getPointForEvent(evt);
+          const parentTarget = graphTarget.getDefaultParent();
+          let edgeStyle2 = style || "edgeStyle=orthogonalEdgeStyle;rounded=0;";
+          if (edgeStyle2.indexOf("shape=flexArrow") !== -1) {
+            if (edgeStyle2.indexOf("noEdgeStyle=") === -1) edgeStyle2 += "noEdgeStyle=1;";
+            if (edgeStyle2.indexOf("width=") === -1) edgeStyle2 += "width=14;";
+          }
+          const pStyle = "shape=point;fillColor=none;strokeColor=none;";
+          const model = graphTarget.getModel();
+          model.beginUpdate();
+          let e;
+          try {
+            const s = graphTarget.insertVertex(parentTarget, null, "", pt.x - 48, pt.y, 1, 1, pStyle);
+            const t = graphTarget.insertVertex(parentTarget, null, "", pt.x + 48, pt.y, 1, 1, pStyle);
+            e = graphTarget.insertEdge(parentTarget, null, "", s, t, edgeStyle2);
+            const geo = e.geometry != null ? e.geometry.clone() : new mxGeometry();
+            geo.points = [new mxPoint(pt.x, pt.y - 24), new mxPoint(pt.x, pt.y + 24)];
+            model.setGeometry(e, geo);
+          } finally { model.endUpdate(); }
+          graphTarget.setSelectionCell(e);
+          graphTarget.scrollCellToVisible(e);
+          graphTarget.refresh();
+        };
+        const bindEdge = () => {
+          const gr = getActiveGraph();
+          if (!gr) return false;
+          mxUtils.makeDraggable(item, gr, createEdge, g.container);
+          return true;
+        };
+        if (!bindEdge()) {
+          if (!window.__mxPendingDrags) window.__mxPendingDrags = [];
+          window.__mxPendingDrags.push(bindEdge);
+        }
+      }
+
+      // General（精确合并 Grapheditor Sidebar.js 大部分条目）
+      addVertexItem(basicItems.value, "Rectangle", 120, 60, "rounded=0;whiteSpace=wrap;html=1;");
+      addVertexItem(basicItems.value, "Rounded Rectangle", 120, 60, "rounded=1;whiteSpace=wrap;html=1;");
+      addVertexItem(
+        basicItems.value,
+        "Text",
+        40,
+        20,
+        "text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;",
+        { valueThumb: "Text", valueCreate: "Text" }
+      );
+      addVertexItem(
+        basicItems.value,
+        "Textbox",
+        190,
+        120,
+        "text;html=1;strokeColor=none;fillColor=none;spacing=5;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;",
+        { valueThumb: '<h1>Heading</h1><p>Lorem ipsum dolor sit amet...</p>', valueCreate: '<h1>Heading</h1><p>Lorem ipsum dolor sit amet...</p>' }
+      );
+      addVertexItem(basicItems.value, "Ellipse", 120, 80, "ellipse;whiteSpace=wrap;html=1;");
+      addVertexItem(basicItems.value, "Square", 80, 80, "whiteSpace=wrap;html=1;aspect=fixed;");
+      addVertexItem(basicItems.value, "Circle", 80, 80, "ellipse;whiteSpace=wrap;html=1;aspect=fixed;");
+      addVertexItem(basicItems.value, "Process", 120, 60, "shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;");
+      addVertexItem(basicItems.value, "Diamond", 80, 80, "rhombus;whiteSpace=wrap;html=1;");
+      addVertexItem(basicItems.value, "Parallelogram", 120, 60, "shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;");
+      addVertexItem(basicItems.value, "Hexagon", 120, 80, "shape=hexagon;perimeter=hexagonPerimeter;whiteSpace=wrap;html=1;fixedSize=1;");
+      addVertexItem(basicItems.value, "Triangle", 60, 80, "triangle;whiteSpace=wrap;html=1;");
+      addVertexItem(basicItems.value, "Cylinder", 60, 80, "shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;");
+      addVertexItem(basicItems.value, "Cloud", 120, 80, "shape=cloud;ellipse;whiteSpace=wrap;html=1;");
+      addVertexItem(basicItems.value, "Document", 120, 80, "shape=document;whiteSpace=wrap;html=1;boundedLbl=1;");
+      addVertexItem(basicItems.value, "Internal Storage", 80, 80, "shape=internalStorage;whiteSpace=wrap;html=1;backgroundOutline=1;");
+      addVertexItem(basicItems.value, "Cube", 120, 80, "shape=cube;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;darkOpacity2=0.1;");
+      addVertexItem(basicItems.value, "Step", 120, 80, "shape=step;perimeter=stepPerimeter;whiteSpace=wrap;html=1;fixedSize=1;");
+      addVertexItem(basicItems.value, "Trapezoid", 120, 60, "shape=trapezoid;perimeter=trapezoidPerimeter;whiteSpace=wrap;html=1;fixedSize=1;");
+      addVertexItem(basicItems.value, "Tape", 120, 100, "shape=tape;whiteSpace=wrap;html=1;");
+      addVertexItem(basicItems.value, "Note", 80, 100, "shape=note;whiteSpace=wrap;html=1;backgroundOutline=1;darkOpacity=0.05;");
+      addVertexItem(basicItems.value, "Card", 80, 100, "shape=card;whiteSpace=wrap;html=1;");
+      addVertexItem(basicItems.value, "Callout", 120, 80, "shape=callout;whiteSpace=wrap;html=1;perimeter=calloutPerimeter;");
+      addVertexItem(basicItems.value, "Actor", 30, 60, "shape=umlActor;verticalLabelPosition=bottom;verticalAlign=top;html=1;outlineConnect=0;", { valueThumb: "Actor", valueCreate: "Actor" });
+      addVertexItem(basicItems.value, "Or", 60, 80, "shape=xor;whiteSpace=wrap;html=1;");
+      addVertexItem(basicItems.value, "And", 60, 80, "shape=or;whiteSpace=wrap;html=1;");
+      addVertexItem(basicItems.value, "Data Storage", 100, 80, "shape=dataStorage;whiteSpace=wrap;html=1;fixedSize=1;");
+
+      // General edges（基础子集）
+      addEdgeItemTo(basicItems.value, "Arrow", "shape=flexArrow;endArrow=classic;html=1;");
+      addEdgeItemTo(basicItems.value, "Bidirectional Arrow", "shape=flexArrow;endArrow=classic;startArrow=classic;html=1;");
+      addEdgeItemTo(basicItems.value, "Line", "endArrow=none;html=1;");
+      addEdgeItemTo(basicItems.value, "Dashed Line", "endArrow=none;dashed=1;html=1;");
+      addEdgeItemTo(basicItems.value, "Dotted Line", "endArrow=none;dashed=1;dashPattern=1 3;strokeWidth=2;html=1;");
+      addEdgeItemTo(basicItems.value, "Link", "shape=link;html=1;");
+
+      // Misc（精确合并 Grapheditor 主要条目）
       addVertexItem(
         miscItems.value,
-        "Double Ellipse",
-        90,
+        "Title",
+        100,
+        40,
+        "text;strokeColor=none;fillColor=none;html=1;fontSize=24;fontStyle=1;verticalAlign=middle;align=center;",
+        { valueThumb: "Title", valueCreate: "Title" }
+      );
+      addVertexItem(
+        miscItems.value,
+        "Unordered List",
+        100,
+        80,
+        "text;strokeColor=none;fillColor=none;html=1;whiteSpace=wrap;verticalAlign=middle;overflow=hidden;",
+        { valueThumb: "<ul><li>Value 1</li><li>Value 2</li><li>Value 3</li></ul>", valueCreate: "<ul><li>Value 1</li><li>Value 2</li><li>Value 3</li></ul>" }
+      );
+      addVertexItem(
+        miscItems.value,
+        "Ordered List",
+        100,
+        80,
+        "text;strokeColor=none;fillColor=none;html=1;whiteSpace=wrap;verticalAlign=middle;overflow=hidden;",
+        { valueThumb: "<ol><li>Value 1</li><li>Value 2</li><li>Value 3</li></ol>", valueCreate: "<ol><li>Value 1</li><li>Value 2</li><li>Value 3</li></ol>" }
+      );
+      addVertexItem(
+        miscItems.value,
+        "HTML Table 1",
+        280,
+        160,
+        "text;html=1;strokeColor=#c0c0c0;fillColor=#ffffff;overflow=fill;rounded=0;",
+        { valueThumb: '<table border="1" width="100%" height="100%" cellpadding="4" style="width:100%;height:100%;border-collapse:collapse;"><tr style="background-color:#A7C942;color:#ffffff;border:1px solid #98bf21;"><th align="left">Title 1</th><th align="left">Title 2</th><th align="left">Title 3</th></tr><tr style="border:1px solid #98bf21;"><td>Value 1</td><td>Value 2</td><td>Value 3</td></tr><tr style="background-color:#EAF2D3;border:1px solid #98bf21;"><td>Value 4</td><td>Value 5</td><td>Value 6</td></tr><tr style="border:1px solid #98bf21;"><td>Value 7</td><td>Value 8</td><td>Value 9</td></tr><tr style="background-color:#EAF2D3;border:1px solid #98bf21;"><td>Value 10</td><td>Value 11</td><td>Value 12</td></tr></table>', valueCreate: '<table border="1" width="100%" height="100%" cellpadding="4" style="width:100%;height:100%;border-collapse:collapse;"><tr style="background-color:#A7C942;color:#ffffff;border:1px solid #98bf21;"><th align="left">Title 1</th><th align="left">Title 2</th><th align="left">Title 3</th></tr><tr style="border:1px solid #98bf21;"><td>Value 1</td><td>Value 2</td><td>Value 3</td></tr><tr style="background-color:#EAF2D3;border:1px solid #98bf21;"><td>Value 4</td><td>Value 5</td><td>Value 6</td></tr><tr style="border:1px solid #98bf21;"><td>Value 7</td><td>Value 8</td><td>Value 9</td></tr><tr style="background-color:#EAF2D3;border:1px solid #98bf21;"><td>Value 10</td><td>Value 11</td><td>Value 12</td></tr></table>' }
+      );
+      addVertexItem(
+        miscItems.value,
+        "HTML Table 2",
+        180,
+        140,
+        "text;html=1;strokeColor=#c0c0c0;fillColor=none;overflow=fill;",
+        { valueThumb: '<table border="0" width="100%" height="100%" style="width:100%;height:100%;border-collapse:collapse;"><tr><td align="center">Value 1</td><td align="center">Value 2</td><td align="center">Value 3</td></tr><tr><td align="center">Value 4</td><td align="center">Value 5</td><td align="center">Value 6</td></tr><tr><td align="center">Value 7</td><td align="center">Value 8</td><td align="center">Value 9</td></tr></table>', valueCreate: '<table border="0" width="100%" height="100%" style="width:100%;height:100%;border-collapse:collapse;"><tr><td align="center">Value 1</td><td align="center">Value 2</td><td align="center">Value 3</td></tr><tr><td align="center">Value 4</td><td align="center">Value 5</td><td align="center">Value 6</td></tr><tr><td align="center">Value 7</td><td align="center">Value 8</td><td align="center">Value 9</td></tr></table>' }
+      );
+      addVertexItem(
+        miscItems.value,
+        "Link",
         60,
-        "shape=doubleEllipse;"
+        40,
+        "text;html=1;strokeColor=none;fillColor=none;whiteSpace=wrap;align=center;verticalAlign=middle;fontColor=#0000EE;fontStyle=4;",
+        { valueThumb: "Link", valueCreate: "Link" }
       );
-      addVertexItem(miscItems.value, "Label", 100, 30, "shape=label;");
+      addVertexItem(
+        miscItems.value,
+        "Timestamp",
+        160,
+        20,
+        "text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;",
+        { valueThumb: "%date{ddd mmm dd yyyy HH:MM:ss}%", valueCreate: "%date{ddd mmm dd yyyy HH:MM:ss}%", attrs: { placeholders: "1" } }
+      );
+      addVertexItem(
+        miscItems.value,
+        "Variable",
+        80,
+        20,
+        "text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;overflow=hidden;",
+        { valueThumb: "%name% Text", valueCreate: "%name% Text", attrs: { placeholders: "1", name: "Variable" } }
+      );
 
-      // Advanced
-      addVertexItem(
-        advancedItems.value,
-        "Single Arrow",
-        120,
-        40,
-        "shape=singleArrow;"
-      );
-      addVertexItem(
-        advancedItems.value,
-        "Double Arrow",
-        120,
-        40,
-        "shape=doubleArrow;"
-      );
-      addVertexItem(advancedItems.value, "Line", 120, 10, "shape=line;");
+      // Advanced（精确合并 Grapheditor 主要条目子集）
+      addVertexItem(advancedItems.value, "Tape Data", 80, 80, "shape=tapeData;whiteSpace=wrap;html=1;perimeter=ellipsePerimeter;");
+      addVertexItem(advancedItems.value, "Manual Input", 80, 80, "shape=manualInput;whiteSpace=wrap;html=1;");
+      addVertexItem(advancedItems.value, "Off Page Connector", 80, 80, "shape=offPageConnector;whiteSpace=wrap;html=1;");
+      addVertexItem(advancedItems.value, "Delay", 80, 40, "shape=delay;whiteSpace=wrap;html=1;");
+      addVertexItem(advancedItems.value, "Display", 80, 40, "shape=display;whiteSpace=wrap;html=1;");
+      addVertexItem(advancedItems.value, "Arrow Left", 100, 60, "shape=singleArrow;direction=west;whiteSpace=wrap;html=1;");
+      addVertexItem(advancedItems.value, "Arrow Right", 100, 60, "shape=singleArrow;whiteSpace=wrap;html=1;");
+      addVertexItem(advancedItems.value, "Arrow Up", 60, 100, "shape=singleArrow;direction=north;whiteSpace=wrap;html=1;");
+      addVertexItem(advancedItems.value, "Arrow Down", 60, 100, "shape=singleArrow;direction=south;whiteSpace=wrap;html=1;");
+      addVertexItem(advancedItems.value, "Double Arrow", 100, 60, "shape=doubleArrow;whiteSpace=wrap;html=1;");
+      addVertexItem(advancedItems.value, "Double Arrow Vertical", 60, 100, "shape=doubleArrow;direction=south;whiteSpace=wrap;html=1;");
+      addVertexItem(advancedItems.value, "User", 40, 60, "shape=actor;whiteSpace=wrap;html=1;");
+      addVertexItem(advancedItems.value, "Corner", 80, 80, "shape=corner;whiteSpace=wrap;html=1;");
+      addVertexItem(advancedItems.value, "Tee", 80, 80, "shape=tee;whiteSpace=wrap;html=1;");
+      addVertexItem(advancedItems.value, "Data Store", 60, 60, "shape=datastore;whiteSpace=wrap;html=1;");
+      addVertexItem(advancedItems.value, "Ellipse + Divider H", 80, 80, "shape=lineEllipse;perimeter=ellipsePerimeter;whiteSpace=wrap;html=1;backgroundOutline=1;");
+      addVertexItem(advancedItems.value, "Ellipse + Divider V", 80, 80, "shape=lineEllipse;line=vertical;perimeter=ellipsePerimeter;whiteSpace=wrap;html=1;backgroundOutline=1;");
+      addVertexItem(advancedItems.value, "Sort", 80, 80, "shape=sortShape;perimeter=rhombusPerimeter;whiteSpace=wrap;html=1;");
+      addVertexItem(advancedItems.value, "Collate", 80, 80, "shape=collate;whiteSpace=wrap;html=1;");
+      addVertexItem(advancedItems.value, "Switch", 60, 60, "shape=switch;whiteSpace=wrap;html=1;");
+      addVertexItem(advancedItems.value, "Container", 200, 200, "swimlane;", { valueThumb: "Container", valueCreate: "Container" });
 
       addEdgeItem("直线", "edgeStyle=straight;");
       addEdgeItem("折线", "edgeStyle=orthogonalEdgeStyle;");
