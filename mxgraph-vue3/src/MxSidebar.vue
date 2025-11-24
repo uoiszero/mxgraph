@@ -528,6 +528,94 @@ export default {
         }
       }
 
+      /**
+       * addTableCompositeItem
+       * 使用 Grapheditor 的 table 形状构造复合表格（含行/列），并绑定拖拽创建
+       * @param {HTMLElement} containerEl 容器
+       * @param {string} label 标题
+       * @param {number} w 宽度
+       * @param {number} h 高度
+       * @param {number} rows 行数
+       * @param {number} cols 列数
+       */
+      function addTableCompositeItem(containerEl, label, w, h, rows = 3, cols = 3) {
+        const item = document.createElement("div");
+        item.className = "item";
+        const thumb = document.createElement("div");
+        thumb.className = "thumb";
+        thumb.style.width = `40px`;
+        thumb.style.height = `40px`;
+        item.appendChild(thumb);
+        containerEl.appendChild(item);
+
+        bindNoSelect(item);
+        bindNoSelect(thumb);
+
+        const g = createThumbGraph(thumb);
+        const parent = g.getDefaultParent();
+        const tableStyle = "swimlane;shape=table;rowLines=1;columnLines=1;startSize=0;html=1;fillColor=#ffffff;strokeColor=#c0c0c0;";
+        const t = new mxLocal.value.mxCell(label, new mxLocal.value.mxGeometry(0, 0, w, h), tableStyle);
+        t.vertex = true;
+        const rH = h / rows;
+        for (let i = 0; i < rows; i++) {
+          const row = new mxLocal.value.mxCell("", new mxLocal.value.mxGeometry(0, i * rH, w, rH), "");
+          row.vertex = true;
+          t.insert(row);
+          if (i === 0) {
+            const cW = w / cols;
+            for (let j = 0; j < cols; j++) {
+              const col = new mxLocal.value.mxCell("", new mxLocal.value.mxGeometry(j * cW, 0, cW, rH), "");
+              col.vertex = true;
+              row.insert(col);
+            }
+          }
+        }
+        g.getModel().beginUpdate();
+        try {
+          g.addCell(t, parent);
+        } finally {
+          g.getModel().endUpdate();
+        }
+
+        const createComposite = (graphTarget, evt) => {
+          const pt = graphTarget.getPointForEvent(evt);
+          const parentTarget = graphTarget.getDefaultParent();
+          const m = graphTarget.getModel();
+          m.beginUpdate();
+          let tableV = null;
+          try {
+            tableV = graphTarget.insertVertex(parentTarget, null, label, pt.x, pt.y, w, h, tableStyle);
+            const rH2 = h / rows;
+            for (let i = 0; i < rows; i++) {
+              const rowV = graphTarget.insertVertex(tableV, null, "", 0, i * rH2, w, rH2, "");
+              if (i === 0) {
+                const cW2 = w / cols;
+                for (let j = 0; j < cols; j++) {
+                  graphTarget.insertVertex(rowV, null, "", j * cW2, 0, cW2, rH2, "");
+                }
+              }
+            }
+          } finally {
+            m.endUpdate();
+          }
+          if (tableV) {
+            graphTarget.setSelectionCell(tableV);
+            graphTarget.scrollCellToVisible(tableV);
+            graphTarget.refresh();
+          }
+        };
+        const bind = () => {
+          const gr = getActiveGraph();
+          if (!gr) return false;
+          mxLocal.value.mxUtils.makeDraggable(item, gr, createComposite, g.container);
+          return true;
+        };
+        if (!bind()) {
+          if (!window.__mxPendingDrags) window.__mxPendingDrags = [];
+          window.__mxPendingDrags.push(bind);
+        }
+      }
+
       // General（精确合并 Grapheditor Sidebar.js 大部分条目）
       addVertexItem(basicItems.value, "Rectangle", 120, 60, "rounded=0;whiteSpace=wrap;html=1;");
       addVertexItem(basicItems.value, "Rounded Rectangle", 120, 60, "rounded=1;whiteSpace=wrap;html=1;");
@@ -620,6 +708,7 @@ export default {
         "text;html=1;strokeColor=#c0c0c0;fillColor=none;overflow=fill;",
         { valueThumb: '<table border="0" width="100%" height="100%" style="width:100%;height:100%;border-collapse:collapse;"><tr><td align="center">Value 1</td><td align="center">Value 2</td><td align="center">Value 3</td></tr><tr><td align="center">Value 4</td><td align="center">Value 5</td><td align="center">Value 6</td></tr><tr><td align="center">Value 7</td><td align="center">Value 8</td><td align="center">Value 9</td></tr></table>', valueCreate: '<table border="0" width="100%" height="100%" style="width:100%;height:100%;border-collapse:collapse;"><tr><td align="center">Value 1</td><td align="center">Value 2</td><td align="center">Value 3</td></tr><tr><td align="center">Value 4</td><td align="center">Value 5</td><td align="center">Value 6</td></tr><tr><td align="center">Value 7</td><td align="center">Value 8</td><td align="center">Value 9</td></tr></table>' }
       );
+      addTableCompositeItem(miscItems.value, "Table (shape)", 180, 120, 3, 3);
       addVertexItem(
         miscItems.value,
         "Link",
