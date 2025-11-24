@@ -209,9 +209,12 @@ function registerFlexArrow(mxns) {
   mxCellRenderer.registerShape("flexArrow", FlexArrowShape);
 
   // 自定义 EdgeHandler 的额外控制点：width、startWidth、endWidth；以及启用点击添加拐点
-  const edgeCreateCustomHandles = mxns.mxEdgeHandler.prototype.createCustomHandles;
+  const edgeCreateCustomHandles =
+    mxns.mxEdgeHandler.prototype.createCustomHandles;
   mxns.mxEdgeHandler.prototype.createCustomHandles = function () {
-    const handles = edgeCreateCustomHandles ? edgeCreateCustomHandles.apply(this, arguments) : null;
+    const handles = edgeCreateCustomHandles
+      ? edgeCreateCustomHandles.apply(this, arguments)
+      : null;
     const shapeName = this.state.style[mxns.mxConstants.STYLE_SHAPE] || "";
     if (shapeName !== "flexArrow") return handles;
 
@@ -221,7 +224,11 @@ function registerFlexArrow(mxns) {
 
     function makeRectHandle() {
       const sz = mxns.mxConstants.HANDLE_SIZE;
-      return new mxns.mxRectangleShape(new mxns.mxRectangle(0, 0, sz, sz), mxns.mxConstants.HANDLE_FILLCOLOR, mxns.mxConstants.HANDLE_STROKECOLOR);
+      return new mxns.mxRectangleShape(
+        new mxns.mxRectangle(0, 0, sz, sz),
+        mxns.mxConstants.HANDLE_FILLCOLOR,
+        mxns.mxConstants.HANDLE_STROKECOLOR
+      );
     }
 
     const pts = state.absolutePoints || [];
@@ -237,29 +244,39 @@ function registerFlexArrow(mxns) {
     }
 
     const segA = pts.length > 1 ? normalAt(pts[0], pts[1]) : { nx: 0, ny: -1 };
-    const segB = pts.length > 2 ? normalAt(pts[pts.length - 2], pts[pts.length - 1]) : { nx: 0, ny: -1 };
+    const segB =
+      pts.length > 2
+        ? normalAt(pts[pts.length - 2], pts[pts.length - 1])
+        : { nx: 0, ny: -1 };
 
     // 计算法线方向（用于 width/端宽控制手柄的摆放）
     function makeHandle(baseKey, atPoint, nvec) {
       const shape = makeRectHandle();
       const handle = new mxns.mxHandle(state, "all-scroll", null, shape);
       let delta = 0;
-      let base = parseFloat(state.style[baseKey] || (baseKey === "width" ? 10 : 20));
+      let base = parseFloat(
+        state.style[baseKey] || (baseKey === "width" ? 10 : 20)
+      );
       handle.redraw = function () {
         const off = 10 * s;
-        const x = (atPoint?.x || state.getCenterX()) + (nvec ? nvec.nx * off : 0);
-        const y = (atPoint?.y || state.getCenterY()) + (nvec ? nvec.ny * off : 0);
+        const x =
+          (atPoint?.x || state.getCenterX()) + (nvec ? nvec.nx * off : 0);
+        const y =
+          (atPoint?.y || state.getCenterY()) + (nvec ? nvec.ny * off : 0);
         this.shape.bounds.x = Math.floor(x - this.shape.bounds.width / 2);
         this.shape.bounds.y = Math.floor(y - this.shape.bounds.height / 2);
         this.shape.redraw();
       };
       handle.setVisible = function (v) {
-        if (this.shape && this.shape.node) this.shape.node.style.display = v ? "" : "none";
+        if (this.shape && this.shape.node)
+          this.shape.node.style.display = v ? "" : "none";
       };
       handle.setPosition = function (bounds, pt) {
         const vx = pt.x - bounds.getCenterX();
         const vy = pt.y - bounds.getCenterY();
-        delta = nvec ? (vx * nvec.nx + vy * nvec.ny) / s : Math.sqrt(vx * vx + vy * vy) / s;
+        delta = nvec
+          ? (vx * nvec.nx + vy * nvec.ny) / s
+          : Math.sqrt(vx * vx + vy * vy) / s;
       };
       handle.execute = function () {
         const val = Math.max(1, Math.round(base + delta));
@@ -273,8 +290,12 @@ function registerFlexArrow(mxns) {
         graph.refresh();
         graph.setSelectionCell(state.cell);
       };
-      handle.reset = function () { delta = 0; };
-      handle.positionChanged = function () { this.redraw(); };
+      handle.reset = function () {
+        delta = 0;
+      };
+      handle.positionChanged = function () {
+        this.redraw();
+      };
       return handle;
     }
 
@@ -362,11 +383,12 @@ function registerGrapheditorShapes(mxns) {
   ManualInputShape.prototype.redrawPath = function (c, x, y, w, h) {
     const size = mxUtils.getNumber(this.style, "size", 30);
     const s = Math.min(h, size);
-    const arcSize = mxUtils.getValue(
-      this.style,
-      mxConstants.STYLE_ARCSIZE,
-      mxConstants.LINE_ARCSIZE
-    ) / 2;
+    const arcSize =
+      mxUtils.getValue(
+        this.style,
+        mxConstants.STYLE_ARCSIZE,
+        mxConstants.LINE_ARCSIZE
+      ) / 2;
     this.addPoints(
       c,
       [
@@ -403,11 +425,12 @@ function registerGrapheditorShapes(mxns) {
     mxRectangleShape.prototype.paintForeground.apply(this, arguments);
     let inset = 0;
     if (this.isRounded) {
-      const f = mxUtils.getValue(
-        this.style,
-        mxConstants.STYLE_ARCSIZE,
-        mxConstants.RECTANGLE_ROUNDING_FACTOR * 100
-      ) / 100;
+      const f =
+        mxUtils.getValue(
+          this.style,
+          mxConstants.STYLE_ARCSIZE,
+          mxConstants.RECTANGLE_ROUNDING_FACTOR * 100
+        ) / 100;
       inset = Math.max(inset, Math.min(w * f, h * f));
     }
     const dx = Math.max(
@@ -448,13 +471,20 @@ function registerGrapheditorShapes(mxns) {
    * @returns {void}
    */
   CornerShape.prototype.redrawPath = function (c, x, y, w, h) {
-    const dx = Math.max(0, Math.min(w, mxUtils.getNumber(this.style, "dx", 20)));
-    const dy = Math.max(0, Math.min(h, mxUtils.getNumber(this.style, "dy", 20)));
-    const arcSize = mxUtils.getValue(
-      this.style,
-      mxConstants.STYLE_ARCSIZE,
-      mxConstants.LINE_ARCSIZE
-    ) / 2;
+    const dx = Math.max(
+      0,
+      Math.min(w, mxUtils.getNumber(this.style, "dx", 20))
+    );
+    const dy = Math.max(
+      0,
+      Math.min(h, mxUtils.getNumber(this.style, "dy", 20))
+    );
+    const arcSize =
+      mxUtils.getValue(
+        this.style,
+        mxConstants.STYLE_ARCSIZE,
+        mxConstants.LINE_ARCSIZE
+      ) / 2;
     this.addPoints(
       c,
       [
@@ -519,13 +549,20 @@ function registerGrapheditorShapes(mxns) {
    * @returns {void}
    */
   TeeShape.prototype.redrawPath = function (c, x, y, w, h) {
-    const dx = Math.max(0, Math.min(w, mxUtils.getNumber(this.style, "dx", 20)));
-    const dy = Math.max(0, Math.min(h, mxUtils.getNumber(this.style, "dy", 20)));
-    const arcSize = mxUtils.getValue(
-      this.style,
-      mxConstants.STYLE_ARCSIZE,
-      mxConstants.LINE_ARCSIZE
-    ) / 2;
+    const dx = Math.max(
+      0,
+      Math.min(w, mxUtils.getNumber(this.style, "dx", 20))
+    );
+    const dy = Math.max(
+      0,
+      Math.min(h, mxUtils.getNumber(this.style, "dy", 20))
+    );
+    const arcSize =
+      mxUtils.getValue(
+        this.style,
+        mxConstants.STYLE_ARCSIZE,
+        mxConstants.LINE_ARCSIZE
+      ) / 2;
     this.addPoints(
       c,
       [
