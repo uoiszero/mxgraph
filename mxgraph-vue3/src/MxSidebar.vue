@@ -589,7 +589,7 @@ export default {
   gap: 8px;
   user-select: none;
 }
-.item {
+:deep(.item) {
   display: grid;
   grid-template-rows: auto 20px;
   justify-items: center;
@@ -601,7 +601,7 @@ export default {
   cursor: grab;
   user-select: none;
 }
-.thumb {
+:deep(.thumb) {
   display: block;
   background: #fafafa;
   border: 1px solid #e5e7eb;
@@ -609,11 +609,11 @@ export default {
   overflow: hidden;
   user-select: none;
 }
-.caption {
+:deep(.caption) {
   font-size: 12px;
   color: #334155;
 }
-.item:active {
+:deep(.item:active) {
   cursor: grabbing;
 }
 </style>
