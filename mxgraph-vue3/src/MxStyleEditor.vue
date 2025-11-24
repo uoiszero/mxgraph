@@ -472,6 +472,7 @@ export default {
       if (!graph) return;
       const cells = graph.getSelectionCells();
       if (!cells?.length) return;
+      const prevSelection = cells.slice();
       graph.getModel().beginUpdate();
       try {
         for (const c of cells) graph.getModel().setStyle(c, styleText.value);
@@ -479,6 +480,7 @@ export default {
         graph.getModel().endUpdate();
       }
       graph.refresh();
+      graph.setSelectionCells(prevSelection);
     }
 
     /**
@@ -628,6 +630,7 @@ export default {
       if (!graph) return;
       const cells = graph.getSelectionCells();
       if (!cells?.length) return;
+      const prevSelection = cells.slice();
       const set = (k, v) => (v == null ? null : String(v));
       graph.getModel().beginUpdate();
       try {
@@ -699,6 +702,7 @@ export default {
         graph.getModel().endUpdate();
       }
       graph.refresh();
+      graph.setSelectionCells(prevSelection);
       refreshFromSelection();
     }
 
