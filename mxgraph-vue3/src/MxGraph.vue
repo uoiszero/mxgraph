@@ -207,6 +207,71 @@ function registerFlexArrow(mxns) {
    * @returns {void}
    */
   mxCellRenderer.registerShape("flexArrow", FlexArrowShape);
+
+  // 自定义 EdgeHandler 的额外控制点：width、startWidth、endWidth；以及启用点击添加拐点
+  const edgeCreateCustomHandles = mxns.mxEdgeHandler.prototype.createCustomHandles;
+  mxns.mxEdgeHandler.prototype.createCustomHandles = function () {
+    const handles = edgeCreateCustomHandles ? edgeCreateCustomHandles.apply(this, arguments) : null;
+    const shapeName = this.state.style[mxns.mxConstants.STYLE_SHAPE] || "";
+    if (shapeName !== "flexArrow") return handles;
+
+    const graph = this.graph;
+    const state = this.state;
+    const s = graph.view.scale || 1;
+
+    function makeRectHandle() {
+      const sz = mxns.mxConstants.HANDLE_SIZE;
+      return new mxns.mxRectangleShape(new mxns.mxRectangle(0, 0, sz, sz), mxns.mxConstants.HANDLE_FILLCOLOR, mxns.mxConstants.HANDLE_STROKECOLOR);
+    }
+
+    const pts = state.absolutePoints || [];
+    const src = pts[0];
+    const trg = pts[pts.length - 1];
+    const mid = pts.length > 1 ? pts[Math.floor(pts.length / 2)] : src;
+
+    // 计算法线方向（用于 width/端宽控制手柄的摆放）
+    function makeHandle(baseKey, atPoint) {
+      const shape = makeRectHandle();
+      const handle = new mxns.mxHandle(state, "all-scroll", null, shape);
+      let delta = 0;
+      let base = parseFloat(state.style[baseKey] || (baseKey === "width" ? 10 : 20));
+      handle.redraw = function () {
+        const x = atPoint?.x || state.getCenterX();
+        const y = atPoint?.y || state.getCenterY();
+        this.shape.bounds.x = Math.floor(x - this.shape.bounds.width / 2);
+        this.shape.bounds.y = Math.floor(y - this.shape.bounds.height / 2);
+        this.shape.redraw();
+      };
+      handle.setVisible = function (v) {
+        if (this.shape && this.shape.node) this.shape.node.style.display = v ? "" : "none";
+      };
+      handle.setPosition = function (bounds, pt) {
+        // 使用径向距离近似厚度变化（居中或端点处拖动的距离）
+        const vx = pt.x - bounds.getCenterX();
+        const vy = pt.y - bounds.getCenterY();
+        delta = Math.sqrt(vx * vx + vy * vy) / s * (vy < 0 ? 1 : 1);
+      };
+      handle.execute = function () {
+        const val = Math.max(1, Math.round(base + delta));
+        graph.setCellStyles(baseKey, String(val), [state.cell]);
+      };
+      handle.reset = function () { delta = 0; };
+      handle.positionChanged = function () { this.redraw(); };
+      return handle;
+    }
+
+    const startW = makeHandle("startWidth", src);
+    const endW = makeHandle("endWidth", trg);
+    const bodyW = makeHandle("width", mid);
+
+    return [startW, endW, bodyW];
+  };
+
+  // 启用虚拟拐点并采用 Grapheditor 的添加方式（Shift+点击添加）
+  mxns.mxEdgeHandler.prototype.virtualBendsEnabled = true;
+  mxns.mxEdgeHandler.prototype.isAddPointEvent = function (evt) {
+    return mxns.mxEvent.isShiftDown(evt);
+  };
 }
 
 /**
