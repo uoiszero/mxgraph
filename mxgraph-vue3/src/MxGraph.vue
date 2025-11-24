@@ -114,6 +114,7 @@ function renderCells() {
 function initGraph() {
   const { mxGraph, mxRubberband, mxEvent } = mx;
   graph = new mxGraph(container.value);
+  graph.resetEdgesOnConnect = false;
   graph.setEnabled(!props.readOnly);
   // 启用可连接与平移，提升拖拽连线与交互体验
   graph.setConnectable(true);
