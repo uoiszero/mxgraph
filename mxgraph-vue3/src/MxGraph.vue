@@ -229,15 +229,26 @@ function registerFlexArrow(mxns) {
     const trg = pts[pts.length - 1];
     const mid = pts.length > 1 ? pts[Math.floor(pts.length / 2)] : src;
 
+    function normalAt(a, b) {
+      const dx = (b?.x || 0) - (a?.x || 0);
+      const dy = (b?.y || 0) - (a?.y || 0);
+      const len = Math.max(1, Math.sqrt(dx * dx + dy * dy));
+      return { nx: -dy / len, ny: dx / len };
+    }
+
+    const segA = pts.length > 1 ? normalAt(pts[0], pts[1]) : { nx: 0, ny: -1 };
+    const segB = pts.length > 2 ? normalAt(pts[pts.length - 2], pts[pts.length - 1]) : { nx: 0, ny: -1 };
+
     // 计算法线方向（用于 width/端宽控制手柄的摆放）
-    function makeHandle(baseKey, atPoint) {
+    function makeHandle(baseKey, atPoint, nvec) {
       const shape = makeRectHandle();
       const handle = new mxns.mxHandle(state, "all-scroll", null, shape);
       let delta = 0;
       let base = parseFloat(state.style[baseKey] || (baseKey === "width" ? 10 : 20));
       handle.redraw = function () {
-        const x = atPoint?.x || state.getCenterX();
-        const y = atPoint?.y || state.getCenterY();
+        const off = 10 * s;
+        const x = (atPoint?.x || state.getCenterX()) + (nvec ? nvec.nx * off : 0);
+        const y = (atPoint?.y || state.getCenterY()) + (nvec ? nvec.ny * off : 0);
         this.shape.bounds.x = Math.floor(x - this.shape.bounds.width / 2);
         this.shape.bounds.y = Math.floor(y - this.shape.bounds.height / 2);
         this.shape.redraw();
@@ -246,23 +257,30 @@ function registerFlexArrow(mxns) {
         if (this.shape && this.shape.node) this.shape.node.style.display = v ? "" : "none";
       };
       handle.setPosition = function (bounds, pt) {
-        // 使用径向距离近似厚度变化（居中或端点处拖动的距离）
         const vx = pt.x - bounds.getCenterX();
         const vy = pt.y - bounds.getCenterY();
-        delta = Math.sqrt(vx * vx + vy * vy) / s * (vy < 0 ? 1 : 1);
+        delta = nvec ? (vx * nvec.nx + vy * nvec.ny) / s : Math.sqrt(vx * vx + vy * vy) / s;
       };
       handle.execute = function () {
         const val = Math.max(1, Math.round(base + delta));
-        graph.setCellStyles(baseKey, String(val), [state.cell]);
+        const model = graph.getModel();
+        model.beginUpdate();
+        try {
+          graph.setCellStyles(baseKey, String(val), [state.cell]);
+        } finally {
+          model.endUpdate();
+        }
+        graph.refresh();
+        graph.setSelectionCell(state.cell);
       };
       handle.reset = function () { delta = 0; };
       handle.positionChanged = function () { this.redraw(); };
       return handle;
     }
 
-    const startW = makeHandle("startWidth", src);
-    const endW = makeHandle("endWidth", trg);
-    const bodyW = makeHandle("width", mid);
+    const startW = makeHandle("startWidth", src, segA);
+    const endW = makeHandle("endWidth", trg, segB);
+    const bodyW = makeHandle("width", mid, segB);
 
     return [startW, endW, bodyW];
   };
