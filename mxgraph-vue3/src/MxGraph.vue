@@ -162,10 +162,10 @@ function getMx() {
  * @returns {void}
  */
 function registerFlexArrow(mxns) {
-  const { mxUtils, mxArrowConnector, mxCellRenderer } = mxns;
+  const { mxUtils, mxArrowConnector, mxCellRenderer, mxConstants } = mxns;
 
   /**
-   * FlexArrowShape 构造函数
+   * FlexArrowShape 构造函数（对应 Grapheditor 中的通用厚箭头）
    * @constructor
    */
   function FlexArrowShape() {
@@ -174,23 +174,18 @@ function registerFlexArrow(mxns) {
   }
 
   mxUtils.extend(FlexArrowShape, mxArrowConnector);
-
-  /**
-   * 获取箭身基础宽度（厚度）
-   * @returns {number}
-   */
-  FlexArrowShape.prototype.getEdgeWidth = function () {
-    const base = mxUtils.getNumber(this.style, "width", 10);
-    return base + Math.max(0, this.strokewidth - 1);
-  };
+  FlexArrowShape.prototype.defaultWidth = 10;
+  FlexArrowShape.prototype.defaultArrowWidth = 20;
 
   /**
    * 获取起始端箭头宽度
    * @returns {number}
    */
   FlexArrowShape.prototype.getStartArrowWidth = function () {
-    const extra = mxUtils.getNumber(this.style, "startWidth", 20);
-    return this.getEdgeWidth() + extra;
+    return (
+      this.getEdgeWidth() +
+      mxUtils.getNumber(this.style, "startWidth", this.defaultArrowWidth)
+    );
   };
 
   /**
@@ -198,8 +193,21 @@ function registerFlexArrow(mxns) {
    * @returns {number}
    */
   FlexArrowShape.prototype.getEndArrowWidth = function () {
-    const extra = mxUtils.getNumber(this.style, "endWidth", 20);
-    return this.getEdgeWidth() + extra;
+    return (
+      this.getEdgeWidth() +
+      mxUtils.getNumber(this.style, "endWidth", this.defaultArrowWidth)
+    );
+  };
+
+  /**
+   * 获取箭身基础宽度（厚度）
+   * @returns {number}
+   */
+  FlexArrowShape.prototype.getEdgeWidth = function () {
+    return (
+      mxUtils.getNumber(this.style, "width", this.defaultWidth) +
+      Math.max(0, this.strokewidth - 1)
+    );
   };
 
   /**
@@ -208,105 +216,407 @@ function registerFlexArrow(mxns) {
    */
   mxCellRenderer.registerShape("flexArrow", FlexArrowShape);
 
-  // 自定义 EdgeHandler 的额外控制点：width、startWidth、endWidth；以及启用点击添加拐点
-  const edgeCreateCustomHandles =
-    mxns.mxEdgeHandler.prototype.createCustomHandles;
+  /**
+   * 创建自定义拖拽句柄（精确复刻 Grapheditor 的 createHandle 行为）
+   * @param {any} state
+   * @param {string[]} keys
+   * @param {Function} getPositionFn
+   * @param {Function} setPositionFn
+   * @param {boolean} [ignoreGrid=true]
+   * @param {boolean} [redrawEdges=false]
+   * @param {Function} [executeFn]
+   * @returns {any}
+   */
+  function createHandle(
+    state,
+    keys,
+    getPositionFn,
+    setPositionFn,
+    ignoreGrid,
+    redrawEdges,
+    executeFn
+  ) {
+    const handle = new mxns.mxHandle(
+      state,
+      null,
+      mxns.mxVertexHandler.prototype.secondaryHandleImage
+    );
+
+    handle.execute = function (me) {
+      for (let i = 0; i < keys.length; i++) {
+        this.copyStyle(keys[i]);
+      }
+
+      if (executeFn) {
+        executeFn(me);
+      }
+    };
+
+    handle.getPosition = getPositionFn;
+    handle.setPosition = setPositionFn;
+    handle.ignoreGrid = ignoreGrid != null ? ignoreGrid : true;
+
+    if (redrawEdges) {
+      const positionChanged = handle.positionChanged;
+      handle.positionChanged = function () {
+        positionChanged.apply(this, arguments);
+        state.view.invalidate(this.state.cell);
+        state.view.validate();
+      };
+    }
+
+    return handle;
+  }
+
+  /**
+   * 针对边的句柄定位/赋值封装（复刻 Grapheditor createEdgeHandle）
+   * @param {any} state
+   * @param {string[]} keys
+   * @param {boolean} start 是否为起点侧
+   * @param {Function} getPosition
+   * @param {Function} setPosition
+   * @returns {any}
+   */
+  function createEdgeHandle(state, keys, start, getPosition, setPosition) {
+    return createHandle(
+      state,
+      keys,
+      function (bounds) {
+        const pts = state.absolutePoints;
+        const n = pts.length - 1;
+        const tr = state.view.translate;
+        const s = state.view.scale;
+        const p0 = start ? pts[0] : pts[n];
+        const p1 = start ? pts[1] : pts[n - 1];
+        const dx = p1.x - p0.x;
+        const dy = p1.y - p0.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const pt = getPosition.call(this, dist, dx / dist, dy / dist, p0, p1);
+        return new mxns.mxPoint(pt.x / s - tr.x, pt.y / s - tr.y);
+      },
+      function (bounds, pt, me) {
+        const pts = state.absolutePoints;
+        const n = pts.length - 1;
+        const tr = state.view.translate;
+        const s = state.view.scale;
+        const p0 = start ? pts[0] : pts[n];
+        const p1 = start ? pts[1] : pts[n - 1];
+        const dx = p1.x - p0.x;
+        const dy = p1.y - p0.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        pt.x = (pt.x + tr.x) * s;
+        pt.y = (pt.y + tr.y) * s;
+        setPosition.call(this, dist, dx / dist, dy / dist, p0, p1, pt, me);
+      }
+    );
+  }
+
+  /**
+   * 为 flexArrow 形状创建控制句柄（宽度、起止箭头宽度与长度），含 Ctrl/Alt 交互
+   * @param {any} state
+   * @returns {any[]}
+   */
+  function flexArrowHandles(state) {
+    const tol = state.view.graph.gridSize / state.view.scale;
+    const handles = [];
+
+    if (
+      mxUtils.getValue(
+        state.style,
+        mxConstants.STYLE_STARTARROW,
+        mxConstants.NONE
+      ) != mxConstants.NONE
+    ) {
+      handles.push(
+        createEdgeHandle(
+          state,
+          ["width", mxConstants.STYLE_STARTSIZE, mxConstants.STYLE_ENDSIZE],
+          true,
+          function (dist, nx, ny, p0, p1) {
+            const w =
+              (state.shape.getEdgeWidth() - state.shape.strokewidth) *
+              state.view.scale;
+            const l =
+              mxUtils.getNumber(
+                state.style,
+                mxConstants.STYLE_STARTSIZE,
+                mxConstants.ARROW_SIZE / 5
+              ) * 3 * state.view.scale;
+            return new mxns.mxPoint(
+              p0.x + nx * (l + state.shape.strokewidth * state.view.scale) +
+                ny * w / 2,
+              p0.y + ny * (l + state.shape.strokewidth * state.view.scale) -
+                nx * w / 2
+            );
+          },
+          function (dist, nx, ny, p0, p1, pt, me) {
+            const w = Math.sqrt(
+              mxUtils.ptSegDistSq(p0.x, p0.y, p1.x, p1.y, pt.x, pt.y)
+            );
+            const l = mxUtils.ptLineDist(
+              p0.x,
+              p0.y,
+              p0.x + ny,
+              p0.y - nx,
+              pt.x,
+              pt.y
+            );
+            state.style[mxConstants.STYLE_STARTSIZE] =
+              Math.round((l - state.shape.strokewidth) * 100 / 3) / 100 /
+              state.view.scale;
+            state.style["width"] = Math.round(w * 2) / state.view.scale;
+            if (mxns.mxEvent.isControlDown(me.getEvent())) {
+              state.style[mxConstants.STYLE_ENDSIZE] =
+                state.style[mxConstants.STYLE_STARTSIZE];
+            }
+            if (!mxns.mxEvent.isAltDown(me.getEvent())) {
+              if (
+                Math.abs(
+                  parseFloat(state.style[mxConstants.STYLE_STARTSIZE]) -
+                    parseFloat(state.style[mxConstants.STYLE_ENDSIZE])
+                ) < tol / 6
+              ) {
+                state.style[mxConstants.STYLE_STARTSIZE] =
+                  state.style[mxConstants.STYLE_ENDSIZE];
+              }
+            }
+          }
+        )
+      );
+
+      handles.push(
+        createEdgeHandle(
+          state,
+          [
+            "startWidth",
+            "endWidth",
+            mxConstants.STYLE_STARTSIZE,
+            mxConstants.STYLE_ENDSIZE
+          ],
+          true,
+          function (dist, nx, ny, p0, p1) {
+            const w =
+              (state.shape.getStartArrowWidth() - state.shape.strokewidth) *
+              state.view.scale;
+            const l =
+              mxUtils.getNumber(
+                state.style,
+                mxConstants.STYLE_STARTSIZE,
+                mxConstants.ARROW_SIZE / 5
+              ) * 3 * state.view.scale;
+            return new mxns.mxPoint(
+              p0.x + nx * (l + state.shape.strokewidth * state.view.scale) +
+                ny * w / 2,
+              p0.y + ny * (l + state.shape.strokewidth * state.view.scale) -
+                nx * w / 2
+            );
+          },
+          function (dist, nx, ny, p0, p1, pt, me) {
+            const w = Math.sqrt(
+              mxUtils.ptSegDistSq(p0.x, p0.y, p1.x, p1.y, pt.x, pt.y)
+            );
+            const l = mxUtils.ptLineDist(
+              p0.x,
+              p0.y,
+              p0.x + ny,
+              p0.y - nx,
+              pt.x,
+              pt.y
+            );
+            state.style[mxConstants.STYLE_STARTSIZE] =
+              Math.round((l - state.shape.strokewidth) * 100 / 3) / 100 /
+              state.view.scale;
+            state.style["startWidth"] =
+              Math.max(0, Math.round(w * 2) - state.shape.getEdgeWidth()) /
+              state.view.scale;
+            if (mxns.mxEvent.isControlDown(me.getEvent())) {
+              state.style[mxConstants.STYLE_ENDSIZE] =
+                state.style[mxConstants.STYLE_STARTSIZE];
+              state.style["endWidth"] = state.style["startWidth"];
+            }
+            if (!mxns.mxEvent.isAltDown(me.getEvent())) {
+              if (
+                Math.abs(
+                  parseFloat(state.style[mxConstants.STYLE_STARTSIZE]) -
+                    parseFloat(state.style[mxConstants.STYLE_ENDSIZE])
+                ) < tol / 6
+              ) {
+                state.style[mxConstants.STYLE_STARTSIZE] =
+                  state.style[mxConstants.STYLE_ENDSIZE];
+              }
+              if (
+                Math.abs(
+                  parseFloat(state.style["startWidth"]) -
+                    parseFloat(state.style["endWidth"])
+                ) < tol
+              ) {
+                state.style["startWidth"] = state.style["endWidth"];
+              }
+            }
+          }
+        )
+      );
+    }
+
+    if (
+      mxUtils.getValue(
+        state.style,
+        mxConstants.STYLE_ENDARROW,
+        mxConstants.NONE
+      ) != mxConstants.NONE
+    ) {
+      handles.push(
+        createEdgeHandle(
+          state,
+          ["width", mxConstants.STYLE_STARTSIZE, mxConstants.STYLE_ENDSIZE],
+          false,
+          function (dist, nx, ny, p0, p1) {
+            const w =
+              (state.shape.getEdgeWidth() - state.shape.strokewidth) *
+              state.view.scale;
+            const l =
+              mxUtils.getNumber(
+                state.style,
+                mxConstants.STYLE_ENDSIZE,
+                mxConstants.ARROW_SIZE / 5
+              ) * 3 * state.view.scale;
+            return new mxns.mxPoint(
+              p0.x + nx * (l + state.shape.strokewidth * state.view.scale) -
+                ny * w / 2,
+              p0.y + ny * (l + state.shape.strokewidth * state.view.scale) +
+                nx * w / 2
+            );
+          },
+          function (dist, nx, ny, p0, p1, pt, me) {
+            const w = Math.sqrt(
+              mxUtils.ptSegDistSq(p0.x, p0.y, p1.x, p1.y, pt.x, pt.y)
+            );
+            const l = mxUtils.ptLineDist(
+              p0.x,
+              p0.y,
+              p0.x + ny,
+              p0.y - nx,
+              pt.x,
+              pt.y
+            );
+            state.style[mxConstants.STYLE_ENDSIZE] =
+              Math.round((l - state.shape.strokewidth) * 100 / 3) / 100 /
+              state.view.scale;
+            state.style["width"] = Math.round(w * 2) / state.view.scale;
+            if (mxns.mxEvent.isControlDown(me.getEvent())) {
+              state.style[mxConstants.STYLE_STARTSIZE] =
+                state.style[mxConstants.STYLE_ENDSIZE];
+            }
+            if (!mxns.mxEvent.isAltDown(me.getEvent())) {
+              if (
+                Math.abs(
+                  parseFloat(state.style[mxConstants.STYLE_ENDSIZE]) -
+                    parseFloat(state.style[mxConstants.STYLE_STARTSIZE])
+                ) < tol / 6
+              ) {
+                state.style[mxConstants.STYLE_ENDSIZE] =
+                  state.style[mxConstants.STYLE_STARTSIZE];
+              }
+            }
+          }
+        )
+      );
+
+      handles.push(
+        createEdgeHandle(
+          state,
+          [
+            "startWidth",
+            "endWidth",
+            mxConstants.STYLE_STARTSIZE,
+            mxConstants.STYLE_ENDSIZE
+          ],
+          false,
+          function (dist, nx, ny, p0, p1) {
+            const w =
+              (state.shape.getEndArrowWidth() - state.shape.strokewidth) *
+              state.view.scale;
+            const l =
+              mxUtils.getNumber(
+                state.style,
+                mxConstants.STYLE_ENDSIZE,
+                mxConstants.ARROW_SIZE / 5
+              ) * 3 * state.view.scale;
+            return new mxns.mxPoint(
+              p0.x + nx * (l + state.shape.strokewidth * state.view.scale) -
+                ny * w / 2,
+              p0.y + ny * (l + state.shape.strokewidth * state.view.scale) +
+                nx * w / 2
+            );
+          },
+          function (dist, nx, ny, p0, p1, pt, me) {
+            const w = Math.sqrt(
+              mxUtils.ptSegDistSq(p0.x, p0.y, p1.x, p1.y, pt.x, pt.y)
+            );
+            const l = mxUtils.ptLineDist(
+              p0.x,
+              p0.y,
+              p0.x + ny,
+              p0.y - nx,
+              pt.x,
+              pt.y
+            );
+            state.style[mxConstants.STYLE_ENDSIZE] =
+              Math.round((l - state.shape.strokewidth) * 100 / 3) / 100 /
+              state.view.scale;
+            state.style["endWidth"] =
+              Math.max(0, Math.round(w * 2) - state.shape.getEdgeWidth()) /
+              state.view.scale;
+            if (mxns.mxEvent.isControlDown(me.getEvent())) {
+              state.style[mxConstants.STYLE_STARTSIZE] =
+                state.style[mxConstants.STYLE_ENDSIZE];
+              state.style["startWidth"] = state.style["endWidth"];
+            }
+            if (!mxns.mxEvent.isAltDown(me.getEvent())) {
+              if (
+                Math.abs(
+                  parseFloat(state.style[mxConstants.STYLE_ENDSIZE]) -
+                    parseFloat(state.style[mxConstants.STYLE_STARTSIZE])
+                ) < tol / 6
+              ) {
+                state.style[mxConstants.STYLE_ENDSIZE] =
+                  state.style[mxConstants.STYLE_STARTSIZE];
+              }
+              if (
+                Math.abs(
+                  parseFloat(state.style["endWidth"]) -
+                    parseFloat(state.style["startWidth"])
+                ) < tol
+              ) {
+                state.style["endWidth"] = state.style["startWidth"];
+              }
+            }
+          }
+        )
+      );
+    }
+
+    return handles;
+  }
+
+  /**
+   * 挂载到 EdgeHandler：根据形状返回对应自定义句柄集合
+   * @returns {any[]|null}
+   */
+  const edgeCreateCustomHandles = mxns.mxEdgeHandler.prototype.createCustomHandles;
   mxns.mxEdgeHandler.prototype.createCustomHandles = function () {
-    const handles = edgeCreateCustomHandles
+    const prev = edgeCreateCustomHandles
       ? edgeCreateCustomHandles.apply(this, arguments)
       : null;
-    const shapeName = this.state.style[mxns.mxConstants.STYLE_SHAPE] || "";
-    if (shapeName !== "flexArrow") return handles;
-
-    const graph = this.graph;
-    const state = this.state;
-    const s = graph.view.scale || 1;
-
-    function makeRectHandle() {
-      const sz = mxns.mxConstants.HANDLE_SIZE;
-      return new mxns.mxRectangleShape(
-        new mxns.mxRectangle(0, 0, sz, sz),
-        mxns.mxConstants.HANDLE_FILLCOLOR,
-        mxns.mxConstants.HANDLE_STROKECOLOR
-      );
-    }
-
-    const pts = state.absolutePoints || [];
-    const src = pts[0];
-    const trg = pts[pts.length - 1];
-    const mid = pts.length > 1 ? pts[Math.floor(pts.length / 2)] : src;
-
-    function normalAt(a, b) {
-      const dx = (b?.x || 0) - (a?.x || 0);
-      const dy = (b?.y || 0) - (a?.y || 0);
-      const len = Math.max(1, Math.sqrt(dx * dx + dy * dy));
-      return { nx: -dy / len, ny: dx / len };
-    }
-
-    const segA = pts.length > 1 ? normalAt(pts[0], pts[1]) : { nx: 0, ny: -1 };
-    const segB =
-      pts.length > 2
-        ? normalAt(pts[pts.length - 2], pts[pts.length - 1])
-        : { nx: 0, ny: -1 };
-
-    // 计算法线方向（用于 width/端宽控制手柄的摆放）
-    function makeHandle(baseKey, atPoint, nvec) {
-      const shape = makeRectHandle();
-      const handle = new mxns.mxHandle(state, "all-scroll", null, shape);
-      let delta = 0;
-      let base = parseFloat(
-        state.style[baseKey] || (baseKey === "width" ? 10 : 20)
-      );
-      handle.redraw = function () {
-        const off = 10 * s;
-        const x =
-          (atPoint?.x || state.getCenterX()) + (nvec ? nvec.nx * off : 0);
-        const y =
-          (atPoint?.y || state.getCenterY()) + (nvec ? nvec.ny * off : 0);
-        this.shape.bounds.x = Math.floor(x - this.shape.bounds.width / 2);
-        this.shape.bounds.y = Math.floor(y - this.shape.bounds.height / 2);
-        this.shape.redraw();
-      };
-      handle.setVisible = function (v) {
-        if (this.shape && this.shape.node)
-          this.shape.node.style.display = v ? "" : "none";
-      };
-      handle.setPosition = function (bounds, pt) {
-        const vx = pt.x - bounds.getCenterX();
-        const vy = pt.y - bounds.getCenterY();
-        delta = nvec
-          ? (vx * nvec.nx + vy * nvec.ny) / s
-          : Math.sqrt(vx * vx + vy * vy) / s;
-      };
-      handle.execute = function () {
-        const val = Math.max(1, Math.round(base + delta));
-        const model = graph.getModel();
-        model.beginUpdate();
-        try {
-          graph.setCellStyles(baseKey, String(val), [state.cell]);
-        } finally {
-          model.endUpdate();
-        }
-        graph.refresh();
-        graph.setSelectionCell(state.cell);
-      };
-      handle.reset = function () {
-        delta = 0;
-      };
-      handle.positionChanged = function () {
-        this.redraw();
-      };
-      return handle;
-    }
-
-    const startW = makeHandle("startWidth", src, segA);
-    const endW = makeHandle("endWidth", trg, segB);
-    const bodyW = makeHandle("width", mid, segB);
-
-    return [startW, endW, bodyW];
+    const name = this.state.style["shape"];
+    if (name === "flexArrow") return flexArrowHandles(this.state);
+    return prev;
   };
 
-  // 启用虚拟拐点并采用 Grapheditor 的添加方式（Shift+点击添加）
+  /**
+   * 开启虚拟拐点并使用 Shift+点击 添加拐点
+   * @returns {boolean}
+   */
   mxns.mxEdgeHandler.prototype.virtualBendsEnabled = true;
   mxns.mxEdgeHandler.prototype.isAddPointEvent = function (evt) {
     return mxns.mxEvent.isShiftDown(evt);
