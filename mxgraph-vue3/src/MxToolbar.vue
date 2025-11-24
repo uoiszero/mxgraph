@@ -40,6 +40,7 @@ export default {
       () => props.mx,
       v => {
         mxLocal.value = v;
+        ensureUndoManager();
       }
     );
 
@@ -69,9 +70,7 @@ export default {
      * 确保为图绑定撤销管理器
      */
     function ensureUndoManager() {
-      console.log("in ensureUndoManager");
       const graph = getActiveGraph();
-      console.log("ensureUndoManager", graph);
       if (!graph || !mxLocal.value) return;
       if (undoMgr && boundGraph === graph) return;
       const { mxUndoManager, mxEvent } = mxLocal.value;
