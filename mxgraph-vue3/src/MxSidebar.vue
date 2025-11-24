@@ -272,6 +272,12 @@ export default {
         }
       }
 
+      /**
+       * addEdgeItem
+       * 添加连线缩略图项目，支持 flexArrow 缩略图按比例缩小 1/4
+       * @param {string} label 标题
+       * @param {string} style 边样式字符串
+       */
       function addEdgeItem(label, style) {
         const item = document.createElement("div");
         item.className = "item";
@@ -294,6 +300,9 @@ export default {
         // 规范化样式：对 flexArrow 默认补充 noEdgeStyle 与 width
         let edgeStyle = style || "edgeStyle=orthogonalEdgeStyle;rounded=0;";
         if (edgeStyle.indexOf("shape=flexArrow") !== -1) {
+          // 缩略图等比缩小 1/4（缩放到原始 75%）
+          const scale = 0.25;
+          g.view.scale = scale;
           if (edgeStyle.indexOf("noEdgeStyle=") === -1) {
             edgeStyle += "noEdgeStyle=1;";
           }
@@ -309,14 +318,16 @@ export default {
         const innerW = size - margin * 2;
         const innerH = size - margin * 2;
         const L = Math.max(12, innerW - 4);
-        const startX = margin + (innerW - L) / 2;
-        const endX = startX + L;
-        const y = margin + innerH / 2;
+        // 根据缩放修正坐标以保持可视居中
+        const scaleApplied = g.view?.scale || 1;
+        const startX = (margin + (innerW - L) / 2) / scaleApplied;
+        const endX = startX + L / scaleApplied;
+        const y = (margin + innerH / 2) / scaleApplied;
         edge.geometry.setTerminalPoint(new mxPoint(startX, y), true);
         edge.geometry.setTerminalPoint(new mxPoint(endX, y), false);
         // 添加一个轻微的中点偏移以展示厚度，同时保持居中
         const midX = (startX + endX) / 2;
-        const dy = Math.min(6, innerH / 3);
+        const dy = Math.min(6, innerH / 3) / scaleApplied;
         edge.geometry.points = [new mxPoint(midX, y - dy)];
         g.getModel().beginUpdate();
         try {
