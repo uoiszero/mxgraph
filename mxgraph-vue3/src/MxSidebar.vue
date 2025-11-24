@@ -325,10 +325,13 @@ export default {
         const y = (margin + innerH / 2) / scaleApplied;
         edge.geometry.setTerminalPoint(new mxPoint(startX, y), true);
         edge.geometry.setTerminalPoint(new mxPoint(endX, y), false);
-        // 添加一个轻微的中点偏移以展示厚度，同时保持居中
+        // 添加两个中点偏移以与拖放后的默认形状一致（Z 形折线）
         const midX = (startX + endX) / 2;
-        const dy = Math.min(6, innerH / 3) / scaleApplied;
-        edge.geometry.points = [new mxPoint(midX, y - dy)];
+        const dy = Math.min(8, innerH / 3) / scaleApplied;
+        edge.geometry.points = [
+          new mxPoint(midX, y - dy),
+          new mxPoint(midX, y + dy)
+        ];
         g.getModel().beginUpdate();
         try {
           g.addCell(edge, parent);
