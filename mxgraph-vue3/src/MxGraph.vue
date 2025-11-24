@@ -143,6 +143,7 @@ function initGraph() {
 
   graph.getModel().addListener(mxEvent.CHANGE, () => {
     emit("change", graph.getModel());
+    updatePlaceholders();
   });
 
   // 撤销管理：捕获模型与视图的可撤销编辑
@@ -175,6 +176,22 @@ function initGraph() {
     // %date{...}% 简化：使用本地时间字符串
     out = out.replace(/%date\{[^}]*\}%/g, () => new Date().toLocaleString());
     return out;
+  }
+
+  // 更新占位符相关单元的视图
+  function updatePlaceholders() {
+    const model = graph.getModel();
+    let validate = false;
+    const cells = model.cells || {};
+    for (const key in cells) {
+      const cell = cells[key];
+      const v = cell?.value;
+      if (v && typeof v === "object" && v.getAttribute && v.getAttribute("placeholders") === "1") {
+        graph.view.invalidate(cell, false, false);
+        validate = true;
+      }
+    }
+    if (validate) graph.view.validate();
   }
 }
 
@@ -1443,6 +1460,155 @@ function registerGrapheditorShapes(mxns) {
     c.stroke();
   };
   mxCellRenderer.registerShape("umlActor", UmlActorShape);
+
+  // UML Boundary
+  function UmlBoundaryShape() { mxns.mxShape.call(this); }
+  mxUtils.extend(UmlBoundaryShape, mxns.mxShape);
+  UmlBoundaryShape.prototype.getLabelMargins = function (rect) {
+    return new mxns.mxRectangle(rect.width / 6, 0, 0, 0);
+  };
+  UmlBoundaryShape.prototype.paintBackground = function (c, x, y, w, h) {
+    c.translate(x, y);
+    c.begin(); c.moveTo(0, h / 4); c.lineTo(0, (3 * h) / 4); c.end(); c.stroke();
+    c.begin(); c.moveTo(0, h / 2); c.lineTo(w / 6, h / 2); c.end(); c.stroke();
+    c.ellipse(w / 6, 0, (5 * w) / 6, h); c.fillAndStroke();
+  };
+  mxCellRenderer.registerShape("umlBoundary", UmlBoundaryShape);
+
+  // UML Entity
+  function UmlEntityShape() { mxns.mxEllipse.call(this); }
+  mxUtils.extend(UmlEntityShape, mxns.mxEllipse);
+  UmlEntityShape.prototype.paintVertexShape = function (c, x, y, w, h) {
+    mxns.mxEllipse.prototype.paintVertexShape.apply(this, arguments);
+    c.begin(); c.moveTo(x + w / 8, y + h); c.lineTo(x + (7 * w) / 8, y + h); c.end(); c.stroke();
+  };
+  mxCellRenderer.registerShape("umlEntity", UmlEntityShape);
+
+  // UML Destroy
+  function UmlDestroyShape() { mxns.mxShape.call(this); }
+  mxUtils.extend(UmlDestroyShape, mxns.mxShape);
+  UmlDestroyShape.prototype.paintVertexShape = function (c, x, y, w, h) {
+    c.translate(x, y);
+    c.begin();
+    c.moveTo(w, 0); c.lineTo(0, h);
+    c.moveTo(0, 0); c.lineTo(w, h);
+    c.end(); c.stroke();
+  };
+  mxCellRenderer.registerShape("umlDestroy", UmlDestroyShape);
+
+  // UML Control
+  function UmlControlShape() { mxns.mxShape.call(this); }
+  mxUtils.extend(UmlControlShape, mxns.mxShape);
+  UmlControlShape.prototype.getLabelMargins = function (rect) {
+    return new mxns.mxRectangle(rect.x, rect.y + rect.height / 8, rect.width, (7 * rect.height) / 8);
+  };
+  UmlControlShape.prototype.paintBackground = function (c, x, y, w, h) {
+    c.translate(x, y);
+    c.begin(); c.moveTo((3 * w) / 8, (h / 8) * 1.1); c.lineTo((5 * w) / 8, 0); c.end(); c.stroke();
+    c.ellipse(0, h / 8, w, (7 * h) / 8); c.fillAndStroke();
+  };
+  UmlControlShape.prototype.paintForeground = function (c, x, y, w, h) {
+    c.begin(); c.moveTo((3 * w) / 8, (h / 8) * 1.1); c.lineTo((5 * w) / 8, h / 4); c.end(); c.stroke();
+  };
+  mxCellRenderer.registerShape("umlControl", UmlControlShape);
+
+  // UML Lifeline
+  function UmlLifeline() { mxns.mxRectangleShape.call(this); }
+  mxUtils.extend(UmlLifeline, mxns.mxRectangleShape);
+  UmlLifeline.prototype.size = 40;
+  UmlLifeline.prototype.isHtmlAllowed = function () { return false; };
+  UmlLifeline.prototype.getLabelBounds = function (rect) {
+    var size = Math.max(0, Math.min(rect.height, parseFloat(mxUtils.getValue(this.style, "size", this.size)) * this.scale));
+    return new mxns.mxRectangle(rect.x, rect.y, rect.width, size);
+  };
+  UmlLifeline.prototype.paintBackground = function (c, x, y, w, h) {
+    var size = Math.max(0, Math.min(h, parseFloat(mxUtils.getValue(this.style, "size", this.size))));
+    mxns.mxRectangleShape.prototype.paintBackground.call(this, c, x, y, w, size);
+    if (size < h) { c.setDashed(true); c.begin(); c.moveTo(x + w / 2, y + size); c.lineTo(x + w / 2, y + h); c.end(); c.stroke(); }
+  };
+  UmlLifeline.prototype.paintForeground = function (c, x, y, w, h) {
+    var size = Math.max(0, Math.min(h, parseFloat(mxUtils.getValue(this.style, "size", this.size))));
+    mxns.mxRectangleShape.prototype.paintForeground.call(this, c, x, y, w, Math.min(h, size));
+  };
+  mxCellRenderer.registerShape("umlLifeline", UmlLifeline);
+
+  // UML Frame
+  function UmlFrame() { mxns.mxShape.call(this); }
+  mxUtils.extend(UmlFrame, mxns.mxShape);
+  UmlFrame.prototype.width = 60; UmlFrame.prototype.height = 30; UmlFrame.prototype.corner = 10;
+  UmlFrame.prototype.getLabelMargins = function (rect) {
+    return new mxns.mxRectangle(0, 0, rect.width - parseFloat(mxUtils.getValue(this.style, "width", this.width) * this.scale), rect.height - parseFloat(mxUtils.getValue(this.style, "height", this.height) * this.scale));
+  };
+  UmlFrame.prototype.paintBackground = function (c, x, y, w, h) {
+    var co = this.corner;
+    var w0 = Math.min(w, Math.max(co, parseFloat(mxUtils.getValue(this.style, "width", this.width))));
+    var h0 = Math.min(h, Math.max(co * 1.5, parseFloat(mxUtils.getValue(this.style, "height", this.height))));
+    var bg = mxUtils.getValue(this.style, mxConstants.STYLE_SWIMLANE_FILLCOLOR, mxConstants.NONE);
+    if (bg != mxConstants.NONE) { c.setFillColor(bg); c.rect(x, y, w, h); c.fill(); }
+    c.begin(); c.moveTo(x, y); c.lineTo(x + w0, y); c.lineTo(x + w0, y + Math.max(0, h0 - co * 1.5)); c.lineTo(x + Math.max(0, w0 - co), y + h0); c.lineTo(x, y + h0); c.close(); c.fillAndStroke();
+    c.begin(); c.moveTo(x + w0, y); c.lineTo(x + w, y); c.lineTo(x + w, y + h); c.lineTo(x, y + h); c.lineTo(x, y + h0); c.stroke();
+  };
+  mxCellRenderer.registerShape("umlFrame", UmlFrame);
+
+  // Module
+  function ModuleShape() { mxns.mxCylinder.call(this); }
+  mxUtils.extend(ModuleShape, mxns.mxCylinder);
+  ModuleShape.prototype.jettyWidth = 20; ModuleShape.prototype.jettyHeight = 10;
+  ModuleShape.prototype.redrawPath = function (path, x, y, w, h, isForeground) {
+    var dx = parseFloat(mxUtils.getValue(this.style, "jettyWidth", this.jettyWidth));
+    var dy = parseFloat(mxUtils.getValue(this.style, "jettyHeight", this.jettyHeight));
+    var x0 = dx / 2; var x1 = x0 + dx / 2; var y0 = Math.min(dy, h - dy); var y1 = Math.min(y0 + 2 * dy, h - dy);
+    if (isForeground) { path.moveTo(x0, y0); path.lineTo(x1, y0); path.lineTo(x1, y0 + dy); path.lineTo(x0, y0 + dy); path.moveTo(x0, y1); path.lineTo(x1, y1); path.lineTo(x1, y1 + dy); path.lineTo(x0, y1 + dy); path.end(); }
+    else { path.moveTo(x0, 0); path.lineTo(w, 0); path.lineTo(w, h); path.lineTo(x0, h); path.lineTo(x0, y1 + dy); path.lineTo(0, y1 + dy); path.lineTo(0, y1); path.lineTo(x0, y1); path.lineTo(x0, y0 + dy); path.lineTo(0, y0 + dy); path.lineTo(0, y0); path.lineTo(x0, y0); path.close(); path.end(); }
+  };
+  mxCellRenderer.registerShape("module", ModuleShape);
+
+  // Component
+  function ComponentShape() { mxns.mxCylinder.call(this); }
+  mxUtils.extend(ComponentShape, mxns.mxCylinder);
+  ComponentShape.prototype.jettyWidth = 32; ComponentShape.prototype.jettyHeight = 12;
+  ComponentShape.prototype.redrawPath = function (path, x, y, w, h, isForeground) {
+    var dx = parseFloat(mxUtils.getValue(this.style, "jettyWidth", this.jettyWidth));
+    var dy = parseFloat(mxUtils.getValue(this.style, "jettyHeight", this.jettyHeight));
+    var x0 = dx / 2; var x1 = x0 + dx / 2; var y0 = 0.3 * h - dy / 2; var y1 = 0.7 * h - dy / 2;
+    if (isForeground) { path.moveTo(x0, y0); path.lineTo(x1, y0); path.lineTo(x1, y0 + dy); path.lineTo(x0, y0 + dy); path.moveTo(x0, y1); path.lineTo(x1, y1); path.lineTo(x1, y1 + dy); path.lineTo(x0, y1 + dy); path.end(); }
+    else { path.moveTo(x0, 0); path.lineTo(w, 0); path.lineTo(w, h); path.lineTo(x0, h); path.lineTo(x0, y1 + dy); path.lineTo(0, y1 + dy); path.lineTo(0, y1); path.lineTo(x0, y1); path.lineTo(x0, y0 + dy); path.lineTo(0, y0 + dy); path.lineTo(0, y0); path.lineTo(x0, y0); path.close(); path.end(); }
+  };
+  mxCellRenderer.registerShape("component", ComponentShape);
+
+  // Table (Swimlane-based)
+  function TableShape() { mxns.mxSwimlane.call(this); }
+  mxUtils.extend(TableShape, mxns.mxSwimlane);
+  TableShape.prototype.getLabelBounds = function (rect) {
+    var start = this.getTitleSize();
+    if (start == 0) return mxns.mxShape.prototype.getLabelBounds.apply(this, arguments);
+    else return mxns.mxSwimlane.prototype.getLabelBounds.apply(this, arguments);
+  };
+  TableShape.prototype.paintVertexShape = function (c, x, y, w, h) {
+    var start = this.getTitleSize();
+    if (start == 0) { mxns.mxRectangleShape.prototype.paintBackground.apply(this, arguments); }
+    else { mxns.mxSwimlane.prototype.paintVertexShape.apply(this, arguments); c.translate(-x, -y); }
+    this.paintForeground(c, x, y, w, h);
+  };
+  TableShape.prototype.paintForeground = function (c, x, y, w, h) {
+    if (this.state != null) {
+      var flipH = this.flipH, flipV = this.flipV;
+      if (this.direction == mxConstants.DIRECTION_NORTH || this.direction == mxConstants.DIRECTION_SOUTH) { var tmp = flipH; flipH = flipV; flipV = tmp; }
+      c.rotate(-this.getShapeRotation(), flipH, flipV, x + w / 2, y + h / 2);
+      var s = this.scale; x = this.bounds.x / s; y = this.bounds.y / s; w = this.bounds.width / s; h = this.bounds.height / s;
+      this.paintTableForeground(c, x, y, w, h);
+    }
+  };
+  TableShape.prototype.paintTableForeground = function (c, x, y, w, h) {
+    var graph = this.state.view.graph; var start = graph.getActualStartSize(this.state.cell); var rows = graph.model.getChildCells(this.state.cell, true);
+    if (rows.length > 0) {
+      var rowLines = mxUtils.getValue(this.state.style, "rowLines", "1") != "0";
+      var columnLines = mxUtils.getValue(this.state.style, "columnLines", "1") != "0";
+      if (rowLines) { for (var i = 1; i < rows.length; i++) { var geo = graph.getCellGeometry(rows[i]); if (geo != null) { c.begin(); c.moveTo(x + start.x, y + geo.y); c.lineTo(x + w - start.width, y + geo.y); c.end(); c.stroke(); } } }
+      if (columnLines) { var cols = graph.model.getChildCells(rows[0], true); for (var i = 1; i < cols.length; i++) { var geo = graph.getCellGeometry(cols[i]); if (geo != null) { c.begin(); c.moveTo(x + geo.x + start.x, y + start.y); c.lineTo(x + geo.x + start.x, y + h - start.height); c.end(); c.stroke(); } } }
+    }
+  };
+  mxCellRenderer.registerShape("table", TableShape);
 
   mxns.mxPerimeter.CalloutPerimeter = function (bounds, vertex, next, orthogonal) {
     return mxns.mxPerimeter.RectanglePerimeter(mxUtils.getDirectedBounds(bounds, new mxns.mxRectangle(0, 0, 0, Math.max(0, Math.min(bounds.height, parseFloat(mxUtils.getValue(vertex.style, "size", 30) * vertex.view.scale)))), vertex.style), vertex, next, orthogonal);
