@@ -547,16 +547,16 @@ export default {
         "text;html=1;strokeColor=none;fillColor=none;spacing=5;spacingTop=-20;whiteSpace=wrap;overflow=hidden;rounded=0;",
         { valueThumb: '<h1>Heading</h1><p>Lorem ipsum dolor sit amet...</p>', valueCreate: '<h1>Heading</h1><p>Lorem ipsum dolor sit amet...</p>' }
       );
-      addVertexItem(basicItems.value, "Ellipse", 120, 80, "ellipse;whiteSpace=wrap;html=1;");
+      addVertexItem(basicItems.value, "Ellipse", 120, 80, "shape=ellipse;whiteSpace=wrap;html=1;");
       addVertexItem(basicItems.value, "Square", 80, 80, "whiteSpace=wrap;html=1;aspect=fixed;");
-      addVertexItem(basicItems.value, "Circle", 80, 80, "ellipse;whiteSpace=wrap;html=1;aspect=fixed;");
+      addVertexItem(basicItems.value, "Circle", 80, 80, "shape=ellipse;whiteSpace=wrap;html=1;aspect=fixed;");
       addVertexItem(basicItems.value, "Process", 120, 60, "shape=process;whiteSpace=wrap;html=1;backgroundOutline=1;");
-      addVertexItem(basicItems.value, "Diamond", 80, 80, "rhombus;whiteSpace=wrap;html=1;");
+      addVertexItem(basicItems.value, "Diamond", 80, 80, "shape=rhombus;whiteSpace=wrap;html=1;");
       addVertexItem(basicItems.value, "Parallelogram", 120, 60, "shape=parallelogram;perimeter=parallelogramPerimeter;whiteSpace=wrap;html=1;fixedSize=1;");
       addVertexItem(basicItems.value, "Hexagon", 120, 80, "shape=hexagon;perimeter=hexagonPerimeter;whiteSpace=wrap;html=1;fixedSize=1;");
-      addVertexItem(basicItems.value, "Triangle", 60, 80, "triangle;whiteSpace=wrap;html=1;");
+      addVertexItem(basicItems.value, "Triangle", 60, 80, "shape=triangle;whiteSpace=wrap;html=1;");
       addVertexItem(basicItems.value, "Cylinder", 60, 80, "shape=cylinder;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;size=15;");
-      addVertexItem(basicItems.value, "Cloud", 120, 80, "shape=cloud;ellipse;whiteSpace=wrap;html=1;");
+      addVertexItem(basicItems.value, "Cloud", 120, 80, "shape=cloud;whiteSpace=wrap;html=1;");
       addVertexItem(basicItems.value, "Document", 120, 80, "shape=document;whiteSpace=wrap;html=1;boundedLbl=1;");
       addVertexItem(basicItems.value, "Internal Storage", 80, 80, "shape=internalStorage;whiteSpace=wrap;html=1;backgroundOutline=1;");
       addVertexItem(basicItems.value, "Cube", 120, 80, "shape=cube;whiteSpace=wrap;html=1;boundedLbl=1;backgroundOutline=1;darkOpacity=0.05;darkOpacity2=0.1;");
