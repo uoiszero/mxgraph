@@ -44,6 +44,7 @@ function initMx() {
     mxResourceExtension: ".txt"
   });
   registerFlexArrow(mx);
+  registerGrapheditorShapes(mx);
 }
 
 /**
@@ -206,6 +207,261 @@ function registerFlexArrow(mxns) {
    * @returns {void}
    */
   mxCellRenderer.registerShape("flexArrow", FlexArrowShape);
+}
+
+/**
+ * 注册 Grapheditor 中的其它自定义形状（link、manualInput、internalStorage、corner、crossbar、tee）
+ * @param {any} mxns mx 命名空间对象
+ * @returns {void}
+ */
+function registerGrapheditorShapes(mxns) {
+  const {
+    mxUtils,
+    mxCellRenderer,
+    mxArrowConnector,
+    mxActor,
+    mxRectangleShape,
+    mxConstants
+  } = mxns;
+
+  /**
+   * 开放端连线（Link）
+   * @constructor
+   */
+  function LinkShape() {
+    mxArrowConnector.call(this);
+    this.spacing = 0;
+  }
+  mxUtils.extend(LinkShape, mxArrowConnector);
+  /**
+   * @returns {boolean}
+   */
+  LinkShape.prototype.isOpenEnded = function () {
+    return true;
+  };
+  /**
+   * @returns {number}
+   */
+  LinkShape.prototype.getEdgeWidth = function () {
+    const base = mxUtils.getNumber(this.style, "width", 4);
+    return base + Math.max(0, this.strokewidth - 1);
+  };
+  /**
+   * @returns {boolean}
+   */
+  LinkShape.prototype.isArrowRounded = function () {
+    return this.isRounded;
+  };
+  mxCellRenderer.registerShape("link", LinkShape);
+
+  /**
+   * 手动输入（ManualInput）
+   * @constructor
+   */
+  function ManualInputShape() {
+    mxActor.call(this);
+  }
+  mxUtils.extend(ManualInputShape, mxActor);
+  /**
+   * @returns {boolean}
+   */
+  ManualInputShape.prototype.isRoundable = function () {
+    return true;
+  };
+  /**
+   * @param {any} c
+   * @param {number} x
+   * @param {number} y
+   * @param {number} w
+   * @param {number} h
+   * @returns {void}
+   */
+  ManualInputShape.prototype.redrawPath = function (c, x, y, w, h) {
+    const size = mxUtils.getNumber(this.style, "size", 30);
+    const s = Math.min(h, size);
+    const arcSize = mxUtils.getValue(
+      this.style,
+      mxConstants.STYLE_ARCSIZE,
+      mxConstants.LINE_ARCSIZE
+    ) / 2;
+    this.addPoints(
+      c,
+      [
+        new mxns.mxPoint(0, h),
+        new mxns.mxPoint(0, s),
+        new mxns.mxPoint(w, 0),
+        new mxns.mxPoint(w, h)
+      ],
+      this.isRounded,
+      arcSize,
+      true
+    );
+    c.end();
+  };
+  mxCellRenderer.registerShape("manualInput", ManualInputShape);
+
+  /**
+   * 内部存储（InternalStorage）
+   * @constructor
+   */
+  function InternalStorageShape() {
+    mxRectangleShape.call(this);
+  }
+  mxUtils.extend(InternalStorageShape, mxRectangleShape);
+  /**
+   * @param {any} c
+   * @param {number} x
+   * @param {number} y
+   * @param {number} w
+   * @param {number} h
+   * @returns {void}
+   */
+  InternalStorageShape.prototype.paintForeground = function (c, x, y, w, h) {
+    mxRectangleShape.prototype.paintForeground.apply(this, arguments);
+    let inset = 0;
+    if (this.isRounded) {
+      const f = mxUtils.getValue(
+        this.style,
+        mxConstants.STYLE_ARCSIZE,
+        mxConstants.RECTANGLE_ROUNDING_FACTOR * 100
+      ) / 100;
+      inset = Math.max(inset, Math.min(w * f, h * f));
+    }
+    const dx = Math.max(
+      inset,
+      Math.min(w, mxUtils.getNumber(this.style, "dx", 20))
+    );
+    const dy = Math.max(
+      inset,
+      Math.min(h, mxUtils.getNumber(this.style, "dy", 20))
+    );
+    c.begin();
+    c.moveTo(x, y + dy);
+    c.lineTo(x + w, y + dy);
+    c.end();
+    c.stroke();
+    c.begin();
+    c.moveTo(x + dx, y);
+    c.lineTo(x + dx, y + h);
+    c.end();
+    c.stroke();
+  };
+  mxCellRenderer.registerShape("internalStorage", InternalStorageShape);
+
+  /**
+   * 转角（Corner）
+   * @constructor
+   */
+  function CornerShape() {
+    mxActor.call(this);
+  }
+  mxUtils.extend(CornerShape, mxActor);
+  /**
+   * @param {any} c
+   * @param {number} x
+   * @param {number} y
+   * @param {number} w
+   * @param {number} h
+   * @returns {void}
+   */
+  CornerShape.prototype.redrawPath = function (c, x, y, w, h) {
+    const dx = Math.max(0, Math.min(w, mxUtils.getNumber(this.style, "dx", 20)));
+    const dy = Math.max(0, Math.min(h, mxUtils.getNumber(this.style, "dy", 20)));
+    const arcSize = mxUtils.getValue(
+      this.style,
+      mxConstants.STYLE_ARCSIZE,
+      mxConstants.LINE_ARCSIZE
+    ) / 2;
+    this.addPoints(
+      c,
+      [
+        new mxns.mxPoint(0, 0),
+        new mxns.mxPoint(w, 0),
+        new mxns.mxPoint(w, dy),
+        new mxns.mxPoint(dx, dy),
+        new mxns.mxPoint(dx, h),
+        new mxns.mxPoint(0, h)
+      ],
+      this.isRounded,
+      arcSize,
+      true
+    );
+    c.end();
+  };
+  mxCellRenderer.registerShape("corner", CornerShape);
+
+  /**
+   * 横杆（Crossbar）
+   * @constructor
+   */
+  function CrossbarShape() {
+    mxActor.call(this);
+  }
+  mxUtils.extend(CrossbarShape, mxActor);
+  /**
+   * @param {any} c
+   * @param {number} x
+   * @param {number} y
+   * @param {number} w
+   * @param {number} h
+   * @returns {void}
+   */
+  CrossbarShape.prototype.redrawPath = function (c, x, y, w, h) {
+    c.moveTo(0, 0);
+    c.lineTo(0, h);
+    c.end();
+    c.moveTo(w, 0);
+    c.lineTo(w, h);
+    c.end();
+    c.moveTo(0, h / 2);
+    c.lineTo(w, h / 2);
+    c.end();
+  };
+  mxCellRenderer.registerShape("crossbar", CrossbarShape);
+
+  /**
+   * T 形（Tee）
+   * @constructor
+   */
+  function TeeShape() {
+    mxActor.call(this);
+  }
+  mxUtils.extend(TeeShape, mxActor);
+  /**
+   * @param {any} c
+   * @param {number} x
+   * @param {number} y
+   * @param {number} w
+   * @param {number} h
+   * @returns {void}
+   */
+  TeeShape.prototype.redrawPath = function (c, x, y, w, h) {
+    const dx = Math.max(0, Math.min(w, mxUtils.getNumber(this.style, "dx", 20)));
+    const dy = Math.max(0, Math.min(h, mxUtils.getNumber(this.style, "dy", 20)));
+    const arcSize = mxUtils.getValue(
+      this.style,
+      mxConstants.STYLE_ARCSIZE,
+      mxConstants.LINE_ARCSIZE
+    ) / 2;
+    this.addPoints(
+      c,
+      [
+        new mxns.mxPoint(0, 0),
+        new mxns.mxPoint(w, 0),
+        new mxns.mxPoint(w, dy),
+        new mxns.mxPoint((w + dx) / 2, dy),
+        new mxns.mxPoint((w + dx) / 2, h),
+        new mxns.mxPoint((w - dx) / 2, h),
+        new mxns.mxPoint((w - dx) / 2, dy),
+        new mxns.mxPoint(0, dy)
+      ],
+      this.isRounded,
+      arcSize,
+      true
+    );
+    c.end();
+  };
+  mxCellRenderer.registerShape("tee", TeeShape);
 }
 
 /**
