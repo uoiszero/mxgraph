@@ -294,7 +294,7 @@ export default {
             edgeStyle += "noEdgeStyle=1;";
           }
           if (edgeStyle.indexOf("width=") === -1) {
-            edgeStyle += "width=4;";
+            edgeStyle += "width=14;";
           }
         }
         const edge = new mxCell("", new mxGeometry(), edgeStyle);
@@ -331,7 +331,7 @@ export default {
               edgeStyle2 += "noEdgeStyle=1;";
             }
             if (edgeStyle2.indexOf("width=") === -1) {
-              edgeStyle2 += "width=4;";
+              edgeStyle2 += "width=14;";
             }
           }
           const pStyle = "shape=point;fillColor=none;strokeColor=none;";
