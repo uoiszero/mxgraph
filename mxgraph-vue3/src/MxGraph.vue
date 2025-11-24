@@ -1242,6 +1242,134 @@ function registerGrapheditorShapes(mxns) {
   };
   mxCellRenderer.registerShape("process", ProcessShape);
 
+  // Switch
+  function SwitchShape() { mxns.mxActor.call(this); }
+  mxUtils.extend(SwitchShape, mxns.mxActor);
+  SwitchShape.prototype.redrawPath = function (c, x, y, w, h) {
+    var curve = 0.5;
+    c.moveTo(0, 0);
+    c.quadTo(w / 2, h * curve, w, 0);
+    c.quadTo(w * (1 - curve), h / 2, w, h);
+    c.quadTo(w / 2, h * (1 - curve), 0, h);
+    c.quadTo(w * curve, h / 2, 0, 0);
+    c.end();
+  };
+  mxCellRenderer.registerShape("switch", SwitchShape);
+
+  // Callout
+  function CalloutShape() { mxns.mxHexagon.call(this); }
+  mxUtils.extend(CalloutShape, mxns.mxHexagon);
+  CalloutShape.prototype.size = 30;
+  CalloutShape.prototype.position = 0.5;
+  CalloutShape.prototype.position2 = 0.5;
+  CalloutShape.prototype.base = 20;
+  CalloutShape.prototype.getLabelMargins = function () {
+    return new mxns.mxRectangle(0, 0, 0, parseFloat(mxUtils.getValue(this.style, "size", this.size)) * this.scale);
+  };
+  CalloutShape.prototype.isRoundable = function () { return true; };
+  CalloutShape.prototype.redrawPath = function (c, x, y, w, h) {
+    var arcSize = mxUtils.getValue(this.style, mxConstants.STYLE_ARCSIZE, mxConstants.LINE_ARCSIZE) / 2;
+    var s = Math.max(0, Math.min(h, parseFloat(mxUtils.getValue(this.style, "size", this.size))));
+    var dx = w * Math.max(0, Math.min(1, parseFloat(mxUtils.getValue(this.style, "position", this.position))));
+    var dx2 = w * Math.max(0, Math.min(1, parseFloat(mxUtils.getValue(this.style, "position2", this.position2))));
+    var base = Math.max(0, Math.min(w, parseFloat(mxUtils.getValue(this.style, "base", this.base))));
+    this.addPoints(
+      c,
+      [
+        new mxns.mxPoint(0, 0),
+        new mxns.mxPoint(w, 0),
+        new mxns.mxPoint(w, h - s),
+        new mxns.mxPoint(Math.min(w, dx + base), h - s),
+        new mxns.mxPoint(dx2, h),
+        new mxns.mxPoint(Math.max(0, dx), h - s),
+        new mxns.mxPoint(0, h - s)
+      ],
+      this.isRounded,
+      arcSize,
+      true,
+      [4]
+    );
+  };
+  mxCellRenderer.registerShape("callout", CalloutShape);
+
+  // Message
+  function MessageShape() { mxns.mxCylinder.call(this); }
+  mxUtils.extend(MessageShape, mxns.mxCylinder);
+  MessageShape.prototype.redrawPath = function (path, x, y, w, h, isForeground) {
+    if (isForeground) {
+      path.moveTo(0, 0);
+      path.lineTo(w / 2, h / 2);
+      path.lineTo(w, 0);
+      path.end();
+    } else {
+      path.moveTo(0, 0);
+      path.lineTo(w, 0);
+      path.lineTo(w, h);
+      path.lineTo(0, h);
+      path.close();
+      path.end();
+    }
+  };
+  mxCellRenderer.registerShape("message", MessageShape);
+
+  // Provided/Required Interface family
+  function LollipopShape() { mxns.mxShape.call(this); }
+  mxUtils.extend(LollipopShape, mxns.mxShape);
+  LollipopShape.prototype.size = 10;
+  LollipopShape.prototype.paintBackground = function (c, x, y, w, h) {
+    var sz = parseFloat(mxUtils.getValue(this.style, "size", this.size));
+    c.translate(x, y);
+    c.ellipse((w - sz) / 2, 0, sz, sz);
+    c.fillAndStroke();
+    c.begin(); c.moveTo(w / 2, sz); c.lineTo(w / 2, h); c.end(); c.stroke();
+  };
+  mxCellRenderer.registerShape("lollipop", LollipopShape);
+
+  function RequiresShape() { mxns.mxShape.call(this); }
+  mxUtils.extend(RequiresShape, mxns.mxShape);
+  RequiresShape.prototype.size = 10;
+  RequiresShape.prototype.inset = 2;
+  RequiresShape.prototype.paintBackground = function (c, x, y, w, h) {
+    var sz = parseFloat(mxUtils.getValue(this.style, "size", this.size));
+    var inset = parseFloat(mxUtils.getValue(this.style, "inset", this.inset)) + this.strokewidth;
+    c.translate(x, y);
+    c.begin(); c.moveTo(w / 2, sz + inset); c.lineTo(w / 2, h); c.end(); c.stroke();
+    c.begin();
+    c.moveTo((w - sz) / 2 - inset, sz / 2);
+    c.quadTo((w - sz) / 2 - inset, sz + inset, w / 2, sz + inset);
+    c.quadTo((w + sz) / 2 + inset, sz + inset, (w + sz) / 2 + inset, sz / 2);
+    c.end(); c.stroke();
+  };
+  mxCellRenderer.registerShape("requires", RequiresShape);
+
+  function RequiredInterfaceShape() { mxns.mxShape.call(this); }
+  mxUtils.extend(RequiredInterfaceShape, mxns.mxShape);
+  RequiredInterfaceShape.prototype.paintBackground = function (c, x, y, w, h) {
+    c.translate(x, y);
+    c.begin();
+    c.moveTo(0, 0);
+    c.quadTo(w, 0, w, h / 2);
+    c.quadTo(w, h, 0, h);
+    c.end(); c.stroke();
+  };
+  mxCellRenderer.registerShape("requiredInterface", RequiredInterfaceShape);
+
+  function ProvidedRequiredInterfaceShape() { mxns.mxShape.call(this); }
+  mxUtils.extend(ProvidedRequiredInterfaceShape, mxns.mxShape);
+  ProvidedRequiredInterfaceShape.prototype.inset = 2;
+  ProvidedRequiredInterfaceShape.prototype.paintBackground = function (c, x, y, w, h) {
+    var inset = parseFloat(mxUtils.getValue(this.style, "inset", this.inset)) + this.strokewidth;
+    c.translate(x, y);
+    c.ellipse(0, inset, w - 2 * inset, h - 2 * inset);
+    c.fillAndStroke();
+    c.begin();
+    c.moveTo(w / 2, 0);
+    c.quadTo(w, 0, w, h / 2);
+    c.quadTo(w, h, w / 2, h);
+    c.end(); c.stroke();
+  };
+  mxCellRenderer.registerShape("providedRequiredInterface", ProvidedRequiredInterfaceShape);
+
   function ParallelogramShape() { mxns.mxActor.call(this); }
   mxUtils.extend(ParallelogramShape, mxns.mxActor);
   ParallelogramShape.prototype.size = 0.2;
