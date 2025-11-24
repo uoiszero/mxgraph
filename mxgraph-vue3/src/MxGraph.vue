@@ -28,6 +28,7 @@ const container = ref(null);
 let graph = null;
 const graphRef = ref(null);
 let mx = null;
+let undoMgr = null;
 
 /**
  * 初始化 mxgraph 运行时所需路径与对象
@@ -121,6 +122,9 @@ function initGraph() {
   graph.setConnectable(true);
   graph.setPanning(true);
   graph.panningHandler.useLeftButtonForPanning = true;
+  if (graph.graphHandler) {
+    graph.graphHandler.guidesEnabled = true;
+  }
   if (props.rubberband) new mxRubberband(graph);
 
   renderCells();
@@ -140,6 +144,38 @@ function initGraph() {
   graph.getModel().addListener(mxEvent.CHANGE, () => {
     emit("change", graph.getModel());
   });
+
+  // 撤销管理：捕获模型与视图的可撤销编辑
+  undoMgr = new mx.mxUndoManager();
+  const undoListener = (sender, evt) => {
+    const edit = evt.getProperty("edit");
+    if (edit) undoMgr.undoableEditHappened(edit);
+  };
+  graph.getModel().addListener(mx.mxEvent.UNDO, undoListener);
+  graph.getView().addListener(mx.mxEvent.UNDO, undoListener);
+
+  // 占位符渲染：%name%、%date{...}%
+  const origGetLabel = graph.getLabel.bind(graph);
+  graph.getLabel = function (cell) {
+    let res = origGetLabel(cell);
+    try {
+      const v = cell?.value;
+      if (v && typeof v === "object" && v.getAttribute && v.getAttribute("placeholders") === "1") {
+        res = replacePlaceholders(res, v);
+      }
+    } catch (e) {}
+    return res;
+  };
+  function replacePlaceholders(text, node) {
+    if (typeof text !== "string") return text;
+    let out = text;
+    // %name%
+    const name = node.getAttribute("name") || "";
+    out = out.replace(/%name%/g, name);
+    // %date{...}% 简化：使用本地时间字符串
+    out = out.replace(/%date\{[^}]*\}%/g, () => new Date().toLocaleString());
+    return out;
+  }
 }
 
 /**
@@ -1722,6 +1758,24 @@ onMounted(() => {
   initMx();
   setSize();
   initGraph();
+  const keyHandler = (e) => {
+    const meta = e.metaKey || e.ctrlKey;
+    if (meta && e.key.toLowerCase() === "z") {
+      e.preventDefault();
+      if (e.shiftKey) redo(); else undo();
+    } else if (meta && (e.key.toLowerCase() === "y")) {
+      e.preventDefault();
+      redo();
+    } else if (e.key === "Delete" || e.key === "Backspace") {
+      if (!props.readOnly) {
+        e.preventDefault();
+        deleteSelection();
+      }
+    }
+  };
+  window.addEventListener("keydown", keyHandler);
+  // 保存以便卸载时清理
+  (window.__mxKeyHandler = window.__mxKeyHandler || []).push(keyHandler);
 });
 
 watch(
@@ -1733,6 +1787,12 @@ onBeforeUnmount(() => {
   if (graph) {
     graph.destroy();
     graph = null;
+  }
+  if (window.__mxKeyHandler && window.__mxKeyHandler.length) {
+    const fns = window.__mxKeyHandler.splice(0);
+    fns.forEach(fn => {
+      try { window.removeEventListener("keydown", fn); } catch (e) {}
+    });
   }
 });
 
