@@ -378,47 +378,267 @@ export function registerCustomShapes(mxns) {
   mxns.mxEdgeHandler.prototype.isAddPointEvent = function (evt) { return mxns.mxEvent.isShiftDown(evt); };
 }
 
+/**
+ * 粗箭头（FlexArrow）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_FLEX_ARROW = 'flexArrow';
+/**
+ * 开放端连线（Link）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_LINK = 'link';
+/**
+ * 立方体（Cube）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_CUBE = 'cube';
+/**
+ * 角标便签（Note）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_NOTE = 'note';
+/**
+ * 卡片（Card）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_CARD = 'card';
+/**
+ * 磁带（Tape）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_TAPE = 'tape';
+/**
+ * 文档（Document）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_DOCUMENT = 'document';
+/**
+ * 流程（Process）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_PROCESS = 'process';
+/**
+ * 平行四边形（Parallelogram）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_PARALLELOGRAM = 'parallelogram';
+/**
+ * 梯形（Trapezoid）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_TRAPEZOID = 'trapezoid';
+/**
+ * 单箭头（SingleArrow）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_SINGLE_ARROW = 'singleArrow';
+/**
+ * 双箭头（DoubleArrow）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_DOUBLE_ARROW = 'doubleArrow';
+/**
+ * 数据存储（DataStorage）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_DATA_STORAGE = 'dataStorage';
+/**
+ * 数据库圆柱（Datastore）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_DATASTORE = 'datastore';
+/**
+ * 逻辑或（OR）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_OR = 'or';
+/**
+ * 逻辑异或（XOR）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_XOR = 'xor';
+/**
+ * 循环限制（LoopLimit）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_LOOP_LIMIT = 'loopLimit';
+/**
+ * 跨页连接（OffPageConnector）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_OFF_PAGE_CONNECTOR = 'offPageConnector';
+/**
+ * 磁带数据（TapeData）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_TAPE_DATA = 'tapeData';
+/**
+ * 逻辑或圆（OrEllipse）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_OR_ELLIPSE = 'orEllipse';
+/**
+ * 求和圆（SumEllipse）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_SUM_ELLIPSE = 'sumEllipse';
+/**
+ * 线性圆（LineEllipse，内含水平/垂直线）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_LINE_ELLIPSE = 'lineEllipse';
+/**
+ * 延迟（Delay）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_DELAY = 'delay';
+/**
+ * 显示（Display）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_DISPLAY = 'display';
+/**
+ * 转角（Corner）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_CORNER = 'corner';
+/**
+ * 横杆（Crossbar）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_CROSSBAR = 'crossbar';
+/**
+ * T 形（Tee）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_TEE = 'tee';
+/**
+ * 开关（Switch）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_SWITCH = 'switch';
+/**
+ * 呼出气泡（Callout）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_CALLOUT = 'callout';
+/**
+ * 消息（Message）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_MESSAGE = 'message';
+/**
+ * UML 参与者（UmlActor）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_UML_ACTOR = 'umlActor';
+/**
+ * UML 边界（UmlBoundary）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_UML_BOUNDARY = 'umlBoundary';
+/**
+ * UML 实体（UmlEntity）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_UML_ENTITY = 'umlEntity';
+/**
+ * UML 销毁（UmlDestroy）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_UML_DESTROY = 'umlDestroy';
+/**
+ * UML 控制（UmlControl）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_UML_CONTROL = 'umlControl';
+/**
+ * UML 生命线（UmlLifeline）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_UML_LIFELINE = 'umlLifeline';
+/**
+ * UML 帧（UmlFrame，带标题角）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_UML_FRAME = 'umlFrame';
+/**
+ * 模块（Module）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_MODULE = 'module';
+/**
+ * 组件（Component）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_COMPONENT = 'component';
+/**
+ * 表（Table，基于泳道）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_TABLE = 'table';
+/**
+ * 提供接口（Lollipop，棒棒糖）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_LOLLIPOP = 'lollipop';
+/**
+ * 需求接口（Requires，凹槽）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_REQUIRES = 'requires';
+/**
+ * 需求接口曲线（RequiredInterface）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_REQUIRED_INTERFACE = 'requiredInterface';
+/**
+ * 提供/需求接口组合（ProvidedRequiredInterface）
+ * @constant
+ * @type {string}
+ */
 export const SHAPE_PROVIDED_REQUIRED_INTERFACE = 'providedRequiredInterface';
