@@ -94,6 +94,36 @@ export default {
     const expandedGroup = ref("general");
 
     /**
+     * bindNoSelect
+     * 绑定事件以防止拖拽过程中产生文本选择，同时禁用原生拖拽
+     * @param {HTMLElement} el 目标元素
+     */
+    function bindNoSelect(el) {
+      if (!el) return;
+      el.setAttribute("unselectable", "on");
+      el.style.userSelect = "none";
+      el.style.webkitUserSelect = "none";
+      el.style.msUserSelect = "none";
+      el.addEventListener(
+        "mousedown",
+        e => {
+          e.preventDefault();
+        },
+        { passive: false }
+      );
+      el.addEventListener(
+        "touchstart",
+        e => {
+          e.preventDefault();
+        },
+        { passive: false }
+      );
+      el.addEventListener("dragstart", e => {
+        e.preventDefault();
+      });
+    }
+
+    /**
      * toggleGroup
      * 切换指定分组的展开/折叠状态，保证同时仅有一个分组展开
      * @param {string} key 分组标识
@@ -174,6 +204,9 @@ export default {
         //item.appendChild(caption);
         containerEl.appendChild(item);
 
+        bindNoSelect(item);
+        bindNoSelect(thumb);
+
         const g = createThumbGraph(thumb);
         const scale = Math.min(
           40 / Math.max(1, (Number(w) || 40) + 12),
@@ -188,12 +221,19 @@ export default {
           g.getModel().endUpdate();
         }
 
+        /**
+         * createVertex
+         * 在目标图上插入一个顶点，并选中、滚动可见、强制刷新视图
+         * @param {any} graphTarget 目标 mxGraph 实例
+         * @param {MouseEvent} evt 拖拽释放事件
+         */
         const createVertex = (graphTarget, evt) => {
           const pt = graphTarget.getPointForEvent(evt);
           const parentTarget = graphTarget.getDefaultParent();
           graphTarget.getModel().beginUpdate();
+          let v;
           try {
-            graphTarget.insertVertex(
+            v = graphTarget.insertVertex(
               parentTarget,
               null,
               label,
@@ -205,6 +245,11 @@ export default {
             );
           } finally {
             graphTarget.getModel().endUpdate();
+          }
+          if (v) {
+            graphTarget.setSelectionCell(v);
+            graphTarget.scrollCellToVisible(v);
+            graphTarget.refresh();
           }
         };
         const bind = () => {
@@ -232,6 +277,9 @@ export default {
         item.appendChild(thumb);
         //item.appendChild(caption);
         edgeItems.value.appendChild(item);
+
+        bindNoSelect(item);
+        bindNoSelect(thumb);
 
         const g = createThumbGraph(thumb);
         g.view.scale = 0.75;
@@ -529,6 +577,7 @@ export default {
   border: 1px solid #e5e7eb;
   border-top-left-radius: 8px;
   border-top-right-radius: 8px;
+  user-select: none;
 }
 .palette-title:hover {
   cursor: pointer;
@@ -538,6 +587,7 @@ export default {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 8px;
+  user-select: none;
 }
 .item {
   display: grid;
@@ -557,6 +607,7 @@ export default {
   border: 1px solid #e5e7eb;
   border-radius: 4px;
   overflow: hidden;
+  user-select: none;
 }
 .caption {
   font-size: 12px;
