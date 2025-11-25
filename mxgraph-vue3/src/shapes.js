@@ -364,16 +364,278 @@ export function registerCustomShapes(mxns) {
   TableShape.prototype.paintForeground = function (c, x, y, w, h) { if (this.state != null) { var flipH = this.flipH, flipV = this.flipV; if (this.direction == mxConstants.DIRECTION_NORTH || this.direction == mxConstants.DIRECTION_SOUTH) { var tmp = flipH; flipH = flipV; flipV = tmp; } c.rotate(-this.getShapeRotation(), flipH, flipV, x + w / 2, y + h / 2); var s = this.scale; x = this.bounds.x / s; y = this.bounds.y / s; w = this.bounds.width / s; h = this.bounds.height / s; var graph = this.state.view.graph; var start = graph.getActualStartSize(this.state.cell); var rows = graph.model.getChildCells(this.state.cell, true); if (rows.length > 0) { var rowLines = mxUtils.getValue(this.state.style, 'rowLines', '1') != '0'; var columnLines = mxUtils.getValue(this.state.style, 'columnLines', '1') != '0'; if (rowLines) { for (var i = 1; i < rows.length; i++) { var geo = graph.getCellGeometry(rows[i]); if (geo != null) { c.begin(); c.moveTo(x + start.x, y + geo.y); c.lineTo(x + w - start.width, y + geo.y); c.end(); c.stroke(); } } } if (columnLines) { var cols = graph.model.getChildCells(rows[0], true); for (var i = 1; i < cols.length; i++) { var geo = graph.getCellGeometry(cols[i]); if (geo != null) { c.begin(); c.moveTo(x + geo.x + start.x, y + start.y); c.lineTo(x + geo.x + start.x, y + h - start.height); c.end(); c.stroke(); } } } } } };
   mxCellRenderer.registerShape('table', TableShape);
 
-  // flexArrow handles integration
-  const edgeCreateCustomHandles = mxns.mxEdgeHandler.prototype.createCustomHandles;
-  mxns.mxEdgeHandler.prototype.createCustomHandles = function () {
-    const prev = edgeCreateCustomHandles ? edgeCreateCustomHandles.apply(this, arguments) : null;
-    const name = this.state.style['shape'];
-    if (name === 'flexArrow') {
-      return [];
+  /**
+   * createHandle
+   * 创建一个样式可调的自定义把手（用于顶点/边）。
+   * 位置由 getPositionFn 决定，拖动更新通过 setPositionFn 写回 this.state.style 的键。
+   * @param {any} state 单元状态
+   * @param {string[]} keys 受影响的样式键集合
+   * @param {Function} getPositionFn 计算把手位置函数(bounds)=>mxPoint
+   * @param {Function} setPositionFn 设置样式函数(bounds, pt, me)=>void
+   * @param {boolean} ignoreGrid 是否忽略网格吸附
+   * @param {boolean} redrawEdges 是否重绘相关边
+   * @param {Function} executeFn 拖动结束后的执行函数
+   * @returns {any} 把手对象
+   */
+  function createHandle(state, keys, getPositionFn, setPositionFn, ignoreGrid, redrawEdges, executeFn) {
+    const { mxHandle, mxVertexHandler, mxUtils } = mxns;
+    const handle = new mxHandle(state, null, mxVertexHandler.prototype.secondaryHandleImage);
+    handle.execute = function (me) {
+      for (let i = 0; i < keys.length; i++) {
+        this.copyStyle(keys[i]);
+      }
+      if (typeof executeFn === 'function') {
+        executeFn(me);
+      }
+    };
+    handle.getPosition = getPositionFn;
+    handle.setPosition = setPositionFn;
+    handle.ignoreGrid = ignoreGrid != null ? ignoreGrid : true;
+    if (redrawEdges) {
+      const positionChanged = handle.positionChanged;
+      handle.positionChanged = function () {
+        positionChanged.apply(this, arguments);
+        state.view.invalidate(this.state.cell);
+        state.view.validate();
+      };
     }
-    return prev;
+    handle.getTooltip = function () {
+      return mxUtils.htmlEntities(keys.join(','));
+    };
+    return handle;
+  }
+
+  /**
+   * createEdgeHandle
+   * 基于边的起止段向量计算把手位置与拖动更新（用于 flexArrow、link）。
+   * @param {any} state 单元状态
+   * @param {string[]} keys 受影响的样式键集合
+   * @param {boolean} start 是否作用于起点（false 为终点）
+   * @param {Function} getPosition 位置计算函数(dist, nx, ny, p0, p1)=>mxPoint
+   * @param {Function} setPosition 更新函数(dist, nx, ny, p0, p1, pt, me)=>void
+   * @returns {any} 把手对象
+   */
+  function createEdgeHandle(state, keys, start, getPosition, setPosition) {
+    return createHandle(
+      state,
+      keys,
+      function (bounds) {
+        const pts = state.absolutePoints;
+        const n = pts.length - 1;
+        const tr = state.view.translate;
+        const s = state.view.scale;
+        const p0 = start ? pts[0] : pts[n];
+        const p1 = start ? pts[1] : pts[n - 1];
+        const dx = p1.x - p0.x;
+        const dy = p1.y - p0.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const nx = dx / dist;
+        const ny = dy / dist;
+        const pt = getPosition.call(this, dist, nx, ny, p0, p1);
+        return new mxns.mxPoint(pt.x / s - tr.x, pt.y / s - tr.y);
+      },
+      function (bounds, pt, me) {
+        const pts = state.absolutePoints;
+        const n = pts.length - 1;
+        const tr = state.view.translate;
+        const s = state.view.scale;
+        const p0 = start ? pts[0] : pts[n];
+        const p1 = start ? pts[1] : pts[n - 1];
+        const dx = p1.x - p0.x;
+        const dy = p1.y - p0.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const nx = dx / dist;
+        const ny = dy / dist;
+        const abs = new mxns.mxPoint((pt.x + tr.x) * s, (pt.y + tr.y) * s);
+        setPosition.call(this, dist, nx, ny, p0, p1, abs, me);
+      }
+    );
+  }
+
+  /**
+   * createEdgeWidthHandle
+   * 创建调整边主体宽度的把手（用于 link 等主体宽度调节）。
+   * @param {any} state 单元状态
+   * @param {boolean} start 是否起点侧把手
+   * @param {number} spacing 视觉间距
+   * @returns {any} 把手对象
+   */
+  function createEdgeWidthHandle(state, start, spacing) {
+    return createEdgeHandle(
+      state,
+      ['width'],
+      start,
+      function (dist, nx, ny, p0, p1) {
+        const w = state.shape.getEdgeWidth() * state.view.scale + spacing;
+        return new mxns.mxPoint(p0.x + nx * dist / 4 + ny * w / 2, p0.y + ny * dist / 4 - nx * w / 2);
+      },
+      function (dist, nx, ny, p0, p1, pt) {
+        const w = Math.sqrt(mxns.mxUtils.ptSegDistSq(p0.x, p0.y, p1.x, p1.y, pt.x, pt.y));
+        state.style['width'] = Math.round(w * 2) / state.view.scale - spacing;
+      }
+    );
+  }
+
+  /**
+   * 句柄工厂：为不同形状提供自定义把手集合
+   */
+  const handleFactory = {
+    /**
+     * link：两侧主体宽度调节
+     * @param {any} state
+     * @returns {any[]} 把手数组
+     */
+    'link': function (state) {
+      const spacing = 10;
+      return [createEdgeWidthHandle(state, true, spacing), createEdgeWidthHandle(state, false, spacing)];
+    },
+    /**
+     * flexArrow：起/终两端分别提供：
+     * 1) 边宽 + 箭头长度（startSize/endSize）
+     * 2) 箭头展开宽（startWidth/endWidth）
+     * 支持 Ctrl 同步另一端，Alt 进行吸附对齐。
+     * @param {any} state
+     * @returns {any[]} 把手数组
+     */
+    'flexArrow': function (state) {
+      const {
+        mxConstants,
+        mxUtils,
+        mxEvent
+      } = mxns;
+      const tol = state.view.graph.gridSize / state.view.scale;
+      const handles = [];
+      if (mxUtils.getValue(state.style, mxConstants.STYLE_STARTARROW, mxConstants.NONE) != mxConstants.NONE) {
+        // 边宽 + 起始箭头长度
+        handles.push(createEdgeHandle(state, ['width', mxConstants.STYLE_STARTSIZE, mxConstants.STYLE_ENDSIZE], true, function (dist, nx, ny, p0, p1) {
+          const w = (state.shape.getEdgeWidth() - state.shape.strokewidth) * state.view.scale;
+          const l = mxUtils.getNumber(state.style, mxConstants.STYLE_STARTSIZE, mxConstants.ARROW_SIZE / 5) * 3 * state.view.scale;
+          return new mxns.mxPoint(p0.x + nx * (l + state.shape.strokewidth * state.view.scale) + ny * w / 2, p0.y + ny * (l + state.shape.strokewidth * state.view.scale) - nx * w / 2);
+        }, function (dist, nx, ny, p0, p1, pt, me) {
+          const w = Math.sqrt(mxUtils.ptSegDistSq(p0.x, p0.y, p1.x, p1.y, pt.x, pt.y));
+          const l = mxUtils.ptLineDist(p0.x, p0.y, p0.x + ny, p0.y - nx, pt.x, pt.y);
+          state.style[mxConstants.STYLE_STARTSIZE] = Math.round((l - state.shape.strokewidth) * 100 / 3) / 100 / state.view.scale;
+          state.style['width'] = Math.round(w * 2) / state.view.scale;
+          if (mxEvent.isControlDown(me.getEvent())) {
+            state.style[mxConstants.STYLE_ENDSIZE] = state.style[mxConstants.STYLE_STARTSIZE];
+          }
+          if (!mxEvent.isAltDown(me.getEvent())) {
+            if (Math.abs(parseFloat(state.style[mxConstants.STYLE_STARTSIZE]) - parseFloat(state.style[mxConstants.STYLE_ENDSIZE])) < tol / 6) {
+              state.style[mxConstants.STYLE_STARTSIZE] = state.style[mxConstants.STYLE_ENDSIZE];
+            }
+          }
+        }));
+        // 起始箭头展开宽（总箭宽 = 边宽 + startWidth）
+        handles.push(createEdgeHandle(state, ['startWidth', 'endWidth', mxConstants.STYLE_STARTSIZE, mxConstants.STYLE_ENDSIZE], true, function (dist, nx, ny, p0, p1) {
+          const w = (state.shape.getStartArrowWidth() - state.shape.strokewidth) * state.view.scale;
+          const l = mxUtils.getNumber(state.style, mxConstants.STYLE_STARTSIZE, mxConstants.ARROW_SIZE / 5) * 3 * state.view.scale;
+          return new mxns.mxPoint(p0.x + nx * (l + state.shape.strokewidth * state.view.scale) + ny * w / 2, p0.y + ny * (l + state.shape.strokewidth * state.view.scale) - nx * w / 2);
+        }, function (dist, nx, ny, p0, p1, pt, me) {
+          const w = Math.sqrt(mxUtils.ptSegDistSq(p0.x, p0.y, p1.x, p1.y, pt.x, pt.y));
+          const l = mxUtils.ptLineDist(p0.x, p0.y, p0.x + ny, p0.y - nx, pt.x, pt.y);
+          state.style[mxConstants.STYLE_STARTSIZE] = Math.round((l - state.shape.strokewidth) * 100 / 3) / 100 / state.view.scale;
+          state.style['startWidth'] = Math.max(0, Math.round(w * 2) - state.shape.getEdgeWidth()) / state.view.scale;
+          if (mxEvent.isControlDown(me.getEvent())) {
+            state.style[mxConstants.STYLE_ENDSIZE] = state.style[mxConstants.STYLE_STARTSIZE];
+            state.style['endWidth'] = state.style['startWidth'];
+          }
+          if (!mxEvent.isAltDown(me.getEvent())) {
+            if (Math.abs(parseFloat(state.style[mxConstants.STYLE_STARTSIZE]) - parseFloat(state.style[mxConstants.STYLE_ENDSIZE])) < tol / 6) {
+              state.style[mxConstants.STYLE_STARTSIZE] = state.style[mxConstants.STYLE_ENDSIZE];
+            }
+            if (Math.abs(parseFloat(state.style['startWidth']) - parseFloat(state.style['endWidth'])) < tol) {
+              state.style['startWidth'] = state.style['endWidth'];
+            }
+          }
+        }));
+      }
+      if (mxUtils.getValue(state.style, mxConstants.STYLE_ENDARROW, mxConstants.NONE) != mxConstants.NONE) {
+        // 边宽 + 末端箭头长度
+        handles.push(createEdgeHandle(state, ['width', mxConstants.STYLE_STARTSIZE, mxConstants.STYLE_ENDSIZE], false, function (dist, nx, ny, p0, p1) {
+          const w = (state.shape.getEdgeWidth() - state.shape.strokewidth) * state.view.scale;
+          const l = mxUtils.getNumber(state.style, mxConstants.STYLE_ENDSIZE, mxConstants.ARROW_SIZE / 5) * 3 * state.view.scale;
+          return new mxns.mxPoint(p0.x + nx * (l + state.shape.strokewidth * state.view.scale) - ny * w / 2, p0.y + ny * (l + state.shape.strokewidth * state.view.scale) + nx * w / 2);
+        }, function (dist, nx, ny, p0, p1, pt, me) {
+          const w = Math.sqrt(mxUtils.ptSegDistSq(p0.x, p0.y, p1.x, p1.y, pt.x, pt.y));
+          const l = mxUtils.ptLineDist(p0.x, p0.y, p0.x + ny, p0.y - nx, pt.x, pt.y);
+          state.style[mxConstants.STYLE_ENDSIZE] = Math.round((l - state.shape.strokewidth) * 100 / 3) / 100 / state.view.scale;
+          state.style['width'] = Math.round(w * 2) / state.view.scale;
+          if (mxEvent.isControlDown(me.getEvent())) {
+            state.style[mxConstants.STYLE_STARTSIZE] = state.style[mxConstants.STYLE_ENDSIZE];
+          }
+          if (!mxEvent.isAltDown(me.getEvent())) {
+            if (Math.abs(parseFloat(state.style[mxConstants.STYLE_ENDSIZE]) - parseFloat(state.style[mxConstants.STYLE_STARTSIZE])) < tol / 6) {
+              state.style[mxConstants.STYLE_ENDSIZE] = state.style[mxConstants.STYLE_STARTSIZE];
+            }
+          }
+        }));
+        // 末端箭头展开宽
+        handles.push(createEdgeHandle(state, ['startWidth', 'endWidth', mxConstants.STYLE_STARTSIZE, mxConstants.STYLE_ENDSIZE], false, function (dist, nx, ny, p0, p1) {
+          const w = (state.shape.getEndArrowWidth() - state.shape.strokewidth) * state.view.scale;
+          const l = mxUtils.getNumber(state.style, mxConstants.STYLE_ENDSIZE, mxConstants.ARROW_SIZE / 5) * 3 * state.view.scale;
+          return new mxns.mxPoint(p0.x + nx * (l + state.shape.strokewidth * state.view.scale) - ny * w / 2, p0.y + ny * (l + state.shape.strokewidth * state.view.scale) + nx * w / 2);
+        }, function (dist, nx, ny, p0, p1, pt, me) {
+          const w = Math.sqrt(mxUtils.ptSegDistSq(p0.x, p0.y, p1.x, p1.y, pt.x, pt.y));
+          const l = mxUtils.ptLineDist(p0.x, p0.y, p0.x + ny, p0.y - nx, pt.x, pt.y);
+          state.style[mxConstants.STYLE_ENDSIZE] = Math.round((l - state.shape.strokewidth) * 100 / 3) / 100 / state.view.scale;
+          state.style['endWidth'] = Math.max(0, Math.round(w * 2) - state.shape.getEdgeWidth()) / state.view.scale;
+          if (mxEvent.isControlDown(me.getEvent())) {
+            state.style[mxConstants.STYLE_STARTSIZE] = state.style[mxConstants.STYLE_ENDSIZE];
+            state.style['startWidth'] = state.style['endWidth'];
+          }
+          if (!mxEvent.isAltDown(me.getEvent())) {
+            if (Math.abs(parseFloat(state.style[mxConstants.STYLE_ENDSIZE]) - parseFloat(state.style[mxConstants.STYLE_STARTSIZE])) < tol / 6) {
+              state.style[mxConstants.STYLE_ENDSIZE] = state.style[mxConstants.STYLE_STARTSIZE];
+            }
+            if (Math.abs(parseFloat(state.style['endWidth']) - parseFloat(state.style['startWidth'])) < tol) {
+              state.style['endWidth'] = state.style['startWidth'];
+            }
+          }
+        }));
+      }
+      return handles;
+    }
   };
+
+  /**
+   * 挂接句柄工厂到处理器：在创建自定义把手时按形状类型返回集合
+   * 顶点处理器：保留原有把手并追加；边处理器：返回对应形状的把手集合。
+   */
+  const vertexHandlerCreateCustomHandles = mxns.mxVertexHandler.prototype.createCustomHandles;
+  mxns.mxVertexHandler.prototype.createCustomHandles = function () {
+    let handles = vertexHandlerCreateCustomHandles ? vertexHandlerCreateCustomHandles.apply(this, arguments) : null;
+    if (this.graph.isCellRotatable(this.state.cell)) {
+      let name = this.state.style['shape'];
+      if (mxns.mxCellRenderer.defaultShapes[name] == null && mxns.mxStencilRegistry.getStencil(name) == null) {
+        name = mxns.mxConstants.SHAPE_RECTANGLE;
+      } else if (this.state.view.graph.isSwimlane(this.state.cell)) {
+        name = mxns.mxConstants.SHAPE_SWIMLANE;
+      }
+      const fn = handleFactory[name];
+      if (fn != null) {
+        const temp = fn(this.state);
+        if (temp != null) {
+          handles = handles == null ? temp : handles.concat(temp);
+        }
+      }
+    }
+    return handles;
+  };
+
+  const edgeHandlerCreateCustomHandles = mxns.mxEdgeHandler.prototype.createCustomHandles;
+  mxns.mxEdgeHandler.prototype.createCustomHandles = function () {
+    let name = this.state.style['shape'];
+    if (mxns.mxCellRenderer.defaultShapes[name] == null && mxns.mxStencilRegistry.getStencil(name) == null) {
+      name = mxns.mxConstants.SHAPE_CONNECTOR;
+    }
+    const fn = handleFactory[name];
+    if (fn != null) {
+      return fn(this.state);
+    }
+    return edgeHandlerCreateCustomHandles ? edgeHandlerCreateCustomHandles.apply(this, arguments) : null;
+  };
+
+  // 统一交互增强：启用虚拟折点与 Shift 加点
   mxns.mxEdgeHandler.prototype.virtualBendsEnabled = true;
   mxns.mxEdgeHandler.prototype.isAddPointEvent = function (evt) { return mxns.mxEvent.isShiftDown(evt); };
 }
