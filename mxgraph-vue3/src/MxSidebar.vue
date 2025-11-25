@@ -373,17 +373,16 @@ export default {
 
         const createEdge = (graphTarget, evt) => {
           const pt = graphTarget.getPointForEvent(evt);
-          // 规范化样式（与缩略图一致），确保 flexArrow 默认显式宽度
           let edgeStyle2 = style || "edgeStyle=orthogonalEdgeStyle;rounded=0;";
           if (edgeStyle2.indexOf("shape=flexArrow") !== -1) {
             if (edgeStyle2.indexOf("noEdgeStyle=") === -1) edgeStyle2 += "noEdgeStyle=1;";
             if (edgeStyle2.indexOf("width=") === -1) edgeStyle2 += "width=14;";
           }
-          const tmpl = new mxCell("", new mxGeometry(0, 0, 50, 50), edgeStyle2);
-          tmpl.geometry.setTerminalPoint(new mxPoint(0, 50), true);
-          tmpl.geometry.setTerminalPoint(new mxPoint(50, 0), false);
-          tmpl.geometry.relative = true;
-          tmpl.edge = true;
+          const tmpl = new mxCell("", new mxGeometry(), edgeStyle2);
+          tmpl.setEdge(true);
+          tmpl.geometry.setTerminalPoint(new mxPoint(startX, y), true);
+          tmpl.geometry.setTerminalPoint(new mxPoint(endX, y), false);
+          tmpl.geometry.points = [new mxPoint(midX, y - dy), new mxPoint(midX, y + dy)];
           let select = null;
           graphTarget.getModel().beginUpdate();
           try {
@@ -466,11 +465,11 @@ export default {
             if (edgeStyle2.indexOf("noEdgeStyle=") === -1) edgeStyle2 += "noEdgeStyle=1;";
             if (edgeStyle2.indexOf("width=") === -1) edgeStyle2 += "width=14;";
           }
-          const tmpl = new mxCell("", new mxGeometry(0, 0, 50, 50), edgeStyle2);
-          tmpl.geometry.setTerminalPoint(new mxPoint(0, 50), true);
-          tmpl.geometry.setTerminalPoint(new mxPoint(50, 0), false);
-          tmpl.geometry.relative = true;
-          tmpl.edge = true;
+          const tmpl = new mxCell("", new mxGeometry(), edgeStyle2);
+          tmpl.setEdge(true);
+          tmpl.geometry.setTerminalPoint(new mxPoint(startX, y), true);
+          tmpl.geometry.setTerminalPoint(new mxPoint(endX, y), false);
+          tmpl.geometry.points = [new mxPoint(midX, y - dy), new mxPoint(midX, y + dy)];
           let select = null;
           graphTarget.getModel().beginUpdate();
           try { select = graphTarget.importCells([tmpl], pt.x, pt.y, null); }
