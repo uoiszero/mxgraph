@@ -53,7 +53,15 @@ function initMx() {
    * @returns {void}
    */
   function setupRotation(mxns) {
-    const { mxVertexHandler, mxGraphHandler, mxEvent, mxPoint, mxImage, mxUtils, mxConstants } = mxns;
+    const {
+      mxVertexHandler,
+      mxGraphHandler,
+      mxEvent,
+      mxPoint,
+      mxImage,
+      mxUtils,
+      mxConstants
+    } = mxns;
 
     // 旋转与实时预览能力
     mxVertexHandler.prototype.rotationEnabled = true;
@@ -72,18 +80,21 @@ function initMx() {
     mxVertexHandler.prototype.getRotationHandlePosition = function () {
       const padding = this.getHandlePadding();
       return new mxPoint(
-        this.bounds.x + this.bounds.width - this.rotationHandleVSpacing + padding.x / 2,
+        this.bounds.x +
+          this.bounds.width -
+          this.rotationHandleVSpacing +
+          padding.x / 2,
         this.bounds.y + this.rotationHandleVSpacing - padding.y / 2
       );
     };
 
     // 使用与示例一致的旋转图标（SVG dataURI，不依赖外部资源）
     const rotationSvg =
-      'data:image/svg+xml;utf8,' +
+      "data:image/svg+xml;utf8," +
       encodeURIComponent(
         '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">' +
           '<path stroke="#007bff" fill="#007bff" d="M15.55 5.55L11 1v3.07C7.06 4.56 4 7.92 4 12s3.05 7.44 7 7.93v-2.02c-2.84-.48-5-2.94-5-5.91s2.16-5.43 5-5.91V10l4.55-4.45zM19.93 11c-.17-1.39-.72-2.73-1.62-3.89l-1.42 1.42c.54.75.88 1.6 1.02 2.47h2.02zM13 17.9v2.02c1.39-.17 2.74-.71 3.9-1.61l-1.44-1.44c-.75.54-1.59.89-2.46 1.03zm3.89-2.42l1.42 1.41c.9-1.16 1.45-2.5 1.62-3.89h-2.02c-.14.87-.48 1.72-1.02 2.48z"/>' +
-        '</svg>'
+          "</svg>"
       );
     const rotationHandleImg = new mxImage(rotationSvg, 16, 16);
 
@@ -96,7 +107,11 @@ function initMx() {
      * @param {string} fillColor
      * @returns {any}
      */
-    mxVertexHandler.prototype.createSizerShape = function (bounds, index, fillColor) {
+    mxVertexHandler.prototype.createSizerShape = function (
+      bounds,
+      index,
+      fillColor
+    ) {
       if (index === mxEvent.ROTATION_HANDLE) {
         this.handleImage = rotationHandleImg;
       }
@@ -108,12 +123,30 @@ function initMx() {
      * @returns {void}
      */
     mxVertexHandler.prototype.rotateClick = function () {
-      const stroke = mxUtils.getValue(this.state.style, mxConstants.STYLE_STROKECOLOR, mxConstants.NONE);
-      const fill = mxUtils.getValue(this.state.style, mxConstants.STYLE_FILLCOLOR, mxConstants.NONE);
+      const stroke = mxUtils.getValue(
+        this.state.style,
+        mxConstants.STYLE_STROKECOLOR,
+        mxConstants.NONE
+      );
+      const fill = mxUtils.getValue(
+        this.state.style,
+        mxConstants.STYLE_FILLCOLOR,
+        mxConstants.NONE
+      );
 
-      if (this.state.view.graph.model.isVertex(this.state.cell) && stroke === mxConstants.NONE && fill === mxConstants.NONE) {
-        const angle = mxUtils.mod(mxUtils.getValue(this.state.style, mxConstants.STYLE_ROTATION, 0) + 90, 360);
-        this.state.view.graph.setCellStyles(mxConstants.STYLE_ROTATION, angle, [this.state.cell]);
+      if (
+        this.state.view.graph.model.isVertex(this.state.cell) &&
+        stroke === mxConstants.NONE &&
+        fill === mxConstants.NONE
+      ) {
+        const angle = mxUtils.mod(
+          mxUtils.getValue(this.state.style, mxConstants.STYLE_ROTATION, 0) +
+            90,
+          360
+        );
+        this.state.view.graph.setCellStyles(mxConstants.STYLE_ROTATION, angle, [
+          this.state.cell
+        ]);
       } else {
         this.state.view.graph.turnShapes([this.state.cell]);
       }
@@ -131,7 +164,7 @@ function initMx() {
       origMouseMove.apply(this, arguments);
       if (this.graph.graphHandler.first != null) {
         if (this.rotationShape != null && this.rotationShape.node != null) {
-          this.rotationShape.node.style.display = 'none';
+          this.rotationShape.node.style.display = "none";
         }
       }
     };
@@ -147,7 +180,8 @@ function initMx() {
     mxVertexHandler.prototype.mouseUp = function (sender, me) {
       origMouseUp.apply(this, arguments);
       if (this.rotationShape != null && this.rotationShape.node != null) {
-        this.rotationShape.node.style.display = this.graph.getSelectionCount() === 1 ? '' : 'none';
+        this.rotationShape.node.style.display =
+          this.graph.getSelectionCount() === 1 ? "" : "none";
       }
     };
 
@@ -160,7 +194,8 @@ function initMx() {
       const point = new mxPoint(me.getGraphX(), me.getGraphY());
       const dx = this.state.x + this.state.width / 2 - point.x;
       const dy = this.state.y + this.state.height / 2 - point.y;
-      this.currentAlpha = (dx != 0) ? Math.atan(dy / dx) * 180 / Math.PI + 90 : ((dy < 0) ? 180 : 0);
+      this.currentAlpha =
+        dx != 0 ? (Math.atan(dy / dx) * 180) / Math.PI + 90 : dy < 0 ? 180 : 0;
 
       if (dx > 0) {
         this.currentAlpha -= 180;
@@ -205,34 +240,38 @@ function initMx() {
     mxVertexHandler.prototype.updateHint = function (me) {
       if (this.index !== mxEvent.LABEL_HANDLE) {
         if (this.hint == null) {
-          const hint = document.createElement('div');
-          hint.style.position = 'absolute';
-          hint.style.whiteSpace = 'nowrap';
-          hint.style.padding = '2px 6px';
-          hint.style.borderRadius = '4px';
-          hint.style.fontSize = '12px';
-          hint.style.background = 'rgba(0,0,0,0.65)';
-          hint.style.color = '#fff';
-          hint.style.pointerEvents = 'none';
+          const hint = document.createElement("div");
+          hint.style.position = "absolute";
+          hint.style.whiteSpace = "nowrap";
+          hint.style.padding = "2px 6px";
+          hint.style.borderRadius = "4px";
+          hint.style.fontSize = "12px";
+          hint.style.background = "rgba(0,0,0,0.65)";
+          hint.style.color = "#fff";
+          hint.style.pointerEvents = "none";
           this.hint = hint;
           this.state.view.graph.container.appendChild(hint);
         }
 
         if (this.index === mxEvent.ROTATION_HANDLE) {
           const deg = Math.round((this.currentAlpha || 0) * 10) / 10;
-          this.hint.innerHTML = deg + '&deg;';
+          this.hint.innerHTML = deg + "&deg;";
         } else {
           const s = this.state.view.scale;
           const w = this.roundLength(this.bounds.width / s);
           const h = this.roundLength(this.bounds.height / s);
-          this.hint.innerHTML = w + ' x ' + h;
+          this.hint.innerHTML = w + " x " + h;
         }
 
-        const rot = (this.currentAlpha != null) ? this.currentAlpha : (this.state.style[mxConstants.STYLE_ROTATION] || 0);
+        const rot =
+          this.currentAlpha != null
+            ? this.currentAlpha
+            : this.state.style[mxConstants.STYLE_ROTATION] || 0;
         const bb = mxUtils.getBoundingBox(this.bounds, rot) || this.bounds;
         const offset = 16;
-        this.hint.style.left = (bb.x + Math.round((bb.width - this.hint.clientWidth) / 2)) + 'px';
-        this.hint.style.top = (bb.y + bb.height + offset) + 'px';
+        this.hint.style.left =
+          bb.x + Math.round((bb.width - this.hint.clientWidth) / 2) + "px";
+        this.hint.style.top = bb.y + bb.height + offset + "px";
       }
     };
 
@@ -244,7 +283,8 @@ function initMx() {
     mxGraphHandler.prototype.removeHint = function () {
       origRemoveHint.apply(this, arguments);
       try {
-        if (this.hint && this.hint.parentNode) this.hint.parentNode.removeChild(this.hint);
+        if (this.hint && this.hint.parentNode)
+          this.hint.parentNode.removeChild(this.hint);
       } catch (e) {}
       this.hint = null;
     };
@@ -256,7 +296,8 @@ function initMx() {
     mxVertexHandler.prototype.removeHint = function () {
       mxGraphHandler.prototype.removeHint.apply(this, arguments);
       try {
-        if (this.hint && this.hint.parentNode) this.hint.parentNode.removeChild(this.hint);
+        if (this.hint && this.hint.parentNode)
+          this.hint.parentNode.removeChild(this.hint);
       } catch (e) {}
       this.hint = null;
     };
@@ -378,7 +419,12 @@ function initGraph() {
     let res = origGetLabel(cell);
     try {
       const v = cell?.value;
-      if (v && typeof v === "object" && v.getAttribute && v.getAttribute("placeholders") === "1") {
+      if (
+        v &&
+        typeof v === "object" &&
+        v.getAttribute &&
+        v.getAttribute("placeholders") === "1"
+      ) {
         res = replacePlaceholders(res, v);
       }
     } catch (e) {}
@@ -403,7 +449,12 @@ function initGraph() {
     for (const key in cells) {
       const cell = cells[key];
       const v = cell?.value;
-      if (v && typeof v === "object" && v.getAttribute && v.getAttribute("placeholders") === "1") {
+      if (
+        v &&
+        typeof v === "object" &&
+        v.getAttribute &&
+        v.getAttribute("placeholders") === "1"
+      ) {
         graph.view.invalidate(cell, false, false);
         validate = true;
       }
@@ -434,13 +485,11 @@ function getMx() {
  * @returns {void}
  */
 
-
 /**
  * 注册 Grapheditor 中的其它自定义形状（link、manualInput、internalStorage、corner、crossbar、tee）
  * @param {any} mxns mx 命名空间对象
  * @returns {void}
  */
-
 
 /**
  * 触发打开文件对话框
@@ -644,12 +693,13 @@ onMounted(() => {
   initMx();
   setSize();
   initGraph();
-  const keyHandler = (e) => {
+  const keyHandler = e => {
     const meta = e.metaKey || e.ctrlKey;
     if (meta && e.key.toLowerCase() === "z") {
       e.preventDefault();
-      if (e.shiftKey) redo(); else undo();
-    } else if (meta && (e.key.toLowerCase() === "y")) {
+      if (e.shiftKey) redo();
+      else undo();
+    } else if (meta && e.key.toLowerCase() === "y") {
       e.preventDefault();
       redo();
     } else if (e.key === "Delete" || e.key === "Backspace") {
@@ -677,7 +727,9 @@ onBeforeUnmount(() => {
   if (window.__mxKeyHandler && window.__mxKeyHandler.length) {
     const fns = window.__mxKeyHandler.splice(0);
     fns.forEach(fn => {
-      try { window.removeEventListener("keydown", fn); } catch (e) {}
+      try {
+        window.removeEventListener("keydown", fn);
+      } catch (e) {}
     });
   }
 });
