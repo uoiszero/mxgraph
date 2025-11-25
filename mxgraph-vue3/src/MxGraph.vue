@@ -17,8 +17,7 @@ const props = defineProps({
   imageBasePath: { type: String, default: "mxgraph/javascript/src/images" },
   cells: { type: Array, default: () => [] },
   readOnly: { type: Boolean, default: false },
-  rubberband: { type: Boolean, default: true },
-  useCssTransforms: { type: Boolean, default: true }
+  rubberband: { type: Boolean, default: true }
 });
 
 /**
@@ -31,73 +30,6 @@ let graph = null;
 const graphRef = ref(null);
 let mx = null;
 let undoMgr = null;
-
-/**
- * 启用 CSS 变换支持：覆写 viewStateChanged/validate，并为 mxGraph 添加 updateCssTransform
- * @param {any} mxns mx 命名空间对象
- * @returns {void}
- */
-function patchCssTransforms(mxns) {
-  const { mxGraphView, mxGraph, mxClient } = mxns;
-  if (!mxGraphView.__patchedCssTransforms) {
-    const origValidate = mxGraphView.prototype.validate;
-    mxGraphView.prototype.viewStateChanged = function () {
-      if (this.graph.useCssTransforms) {
-        this.validate();
-        this.graph.sizeDidChange();
-      } else {
-        this.revalidate();
-        this.graph.sizeDidChange();
-      }
-    };
-    mxGraphView.prototype.validate = function (cell) {
-      if (this.graph.useCssTransforms) {
-        this.graph.currentScale = this.scale;
-        this.graph.currentTranslate = this.graph.currentTranslate || { x: 0, y: 0 };
-        this.graph.currentTranslate.x = this.translate.x;
-        this.graph.currentTranslate.y = this.translate.y;
-        this.scale = 1;
-        this.translate.x = 0;
-        this.translate.y = 0;
-      }
-      origValidate.apply(this, arguments);
-      if (this.graph.useCssTransforms) {
-        this.graph.updateCssTransform();
-        this.scale = this.graph.currentScale;
-        this.translate.x = this.graph.currentTranslate.x;
-        this.translate.y = this.graph.currentTranslate.y;
-      }
-    };
-    mxGraph.prototype.updateCssTransform = function () {
-      const temp = this.view.getDrawPane();
-      if (!temp) return;
-      const g = temp.parentNode;
-      if (!this.useCssTransforms) {
-        g.removeAttribute("transformOrigin");
-        g.removeAttribute("transform");
-      } else {
-        const prev = g.getAttribute("transform");
-        g.setAttribute("transformOrigin", "0 0");
-        const s = Math.round(this.currentScale * 100) / 100;
-        const dx = Math.round(this.currentTranslate.x * 100) / 100;
-        const dy = Math.round(this.currentTranslate.y * 100) / 100;
-        g.setAttribute(
-          "transform",
-          "scale(" + s + "," + s + ")" + "translate(" + dx + "," + dy + ")"
-        );
-        if (prev !== g.getAttribute("transform")) {
-          if (mxClient.IS_EDGE) {
-            const val = g.style.display;
-            g.style.display = "none";
-            g.getBBox();
-            g.style.display = val;
-          }
-        }
-      }
-    };
-    mxGraphView.__patchedCssTransforms = true;
-  }
-}
 
 /**
  * 初始化 mxgraph 运行时所需路径与对象
@@ -385,9 +317,6 @@ function setSize() {
     typeof props.width === "number" ? `${props.width}px` : props.width;
   el.style.height =
     typeof props.height === "number" ? `${props.height}px` : props.height;
-  if (graph) {
-    graph.sizeDidChange();
-  }
 }
 
 /**
@@ -456,103 +385,6 @@ function initGraph() {
   }
   if (props.rubberband) new mxRubberband(graph);
 
-  /**
-   * 初始化 CSS 变换模式并覆写相关方法
-   * @returns {void}
-   */
-  function initCssTransformMode() {
-    patchCssTransforms(mx);
-    graph.useCssTransforms = !!props.useCssTransforms;
-    graph.currentScale = graph.view.scale;
-    graph.currentTranslate = {
-      x: graph.view.translate.x,
-      y: graph.view.translate.y
-    };
-  }
-
-  /**
-   * 覆写视图校验以优化滚动容器下的平移（复刻 Grapheditor EditorUi 行为）
-   * @returns {void}
-   */
-  function patchViewValidateForScrollbars() {
-    const { mxUtils } = mx;
-    const orig = graph.view.validate;
-    graph.view.validate = function () {
-      if (this.graph.container != null && mxUtils.hasScrollbars(this.graph.container)) {
-        const pad = this.graph.getPagePadding();
-        const size = this.graph.getPageSize();
-        const tx = this.translate.x;
-        const ty = this.translate.y;
-        this.translate.x = pad.x - (this.x0 || 0) * size.width;
-        this.translate.y = pad.y - (this.y0 || 0) * size.height;
-      }
-      orig.apply(this, arguments);
-    };
-  }
-
-  /**
-   * 覆写 sizeDidChange：维护最小画布尺寸与自动平移（复刻 Grapheditor EditorUi 行为）
-   * @returns {void}
-   */
-  function patchSizeDidChangeForScrollbars() {
-    const { mxUtils, mxRectangle, mxEvent } = mx;
-    const orig = graph.sizeDidChange;
-    graph.sizeDidChange = function () {
-      if (this.container != null && mxUtils.hasScrollbars(this.container)) {
-        const pages = this.getPageLayout();
-        const pad = this.getPagePadding();
-        const size = this.getPageSize();
-        const minw = Math.ceil(2 * pad.x + pages.width * size.width);
-        const minh = Math.ceil(2 * pad.y + pages.height * size.height);
-        const min = graph.minimumGraphSize;
-        if (min == null || min.width != minw || min.height != minh) {
-          graph.minimumGraphSize = new mxRectangle(0, 0, minw, minh);
-        }
-        const dx = pad.x - pages.x * size.width;
-        const dy = pad.y - pages.y * size.height;
-        if (!this.autoTranslate && (this.view.translate.x != dx || this.view.translate.y != dy)) {
-          this.autoTranslate = true;
-          this.view.x0 = pages.x;
-          this.view.y0 = pages.y;
-          const tx = graph.view.translate.x;
-          const ty = graph.view.translate.y;
-          graph.view.setTranslate(dx, dy);
-          graph.container.scrollLeft += Math.round((dx - tx) * graph.view.scale);
-          graph.container.scrollTop += Math.round((dy - ty) * graph.view.scale);
-          this.autoTranslate = false;
-          return;
-        }
-        orig.apply(this, arguments);
-      } else {
-        this.fireEvent(new mx.mxEventObject(mxEvent.SIZE, "bounds", this.getGraphBounds()));
-      }
-    };
-  }
-
-  /**
-   * 统一订阅模型/视图事件以触发刷新（对齐 Grapheditor 的集中重绘钩子）
-   * @returns {void}
-   */
-  function setupUnifiedRefreshSubscriptions() {
-    const { mxEvent } = mx;
-    const repaintHandler = function () {
-      graph.refresh();
-    };
-    const resetHandler = function () {
-      /* no-op */
-    };
-    graph.selectionModel.addListener(mxEvent.CHANGE, resetHandler);
-    graph.model.addListener(mxEvent.CHANGE, repaintHandler);
-    graph.view.addListener(mxEvent.SCALE_AND_TRANSLATE, repaintHandler);
-    graph.view.addListener(mxEvent.TRANSLATE, repaintHandler);
-    graph.view.addListener(mxEvent.SCALE, repaintHandler);
-    graph.view.addListener(mxEvent.DOWN, repaintHandler);
-    graph.view.addListener(mxEvent.UP, repaintHandler);
-    graph.addListener(mxEvent.ROOT, repaintHandler);
-    graph.addListener(mxEvent.ESCAPE, resetHandler);
-    mxEvent.addListener(graph.container, "scroll", resetHandler);
-  }
-
   renderCells();
 
   emit("ready", { graph, mx });
@@ -561,15 +393,6 @@ function initGraph() {
   provide("getGraph", getGraph);
   provide("mxGraph", graphRef);
   provide("mx", mx);
-  provide("setCssTransformEnabled", setCssTransformEnabled);
-
-  initCssTransformMode();
-  patchViewValidateForScrollbars();
-  patchSizeDidChangeForScrollbars();
-  setupUnifiedRefreshSubscriptions();
-
-  graph.view.validate();
-  graph.sizeDidChange();
 
   graph.addListener(mxEvent.CLICK, (sender, evt) => {
     const cell = evt.getProperty("cell");
@@ -637,21 +460,6 @@ function initGraph() {
       }
     }
     if (validate) graph.view.validate();
-  }
-}
-
-/**
- * 切换 CSS 变换模式：与 Grapheditor 导出流程一致，切换后重算并更新画布
- * @param {boolean} enabled 是否启用
- * @returns {void}
- */
-function setCssTransformEnabled(enabled) {
-  if (!graph) return;
-  const prev = !!graph.useCssTransforms;
-  graph.useCssTransforms = !!enabled;
-  if (prev !== graph.useCssTransforms) {
-    graph.view.revalidate();
-    graph.sizeDidChange();
   }
 }
 
@@ -909,11 +717,6 @@ onMounted(() => {
 watch(
   () => [props.width, props.height],
   () => setSize()
-);
-
-watch(
-  () => props.useCssTransforms,
-  val => setCssTransformEnabled(val)
 );
 
 onBeforeUnmount(() => {
