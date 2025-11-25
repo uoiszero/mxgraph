@@ -196,6 +196,70 @@ function initMx() {
         this.redrawHandles();
       }
     };
+
+    /**
+     * 旋转/缩放时的提示文本：旋转显示角度，缩放显示宽高
+     * @param {any} me 鼠标事件
+     * @returns {void}
+     */
+    mxVertexHandler.prototype.updateHint = function (me) {
+      if (this.index !== mxEvent.LABEL_HANDLE) {
+        if (this.hint == null) {
+          const hint = document.createElement('div');
+          hint.style.position = 'absolute';
+          hint.style.whiteSpace = 'nowrap';
+          hint.style.padding = '2px 6px';
+          hint.style.borderRadius = '4px';
+          hint.style.fontSize = '12px';
+          hint.style.background = 'rgba(0,0,0,0.65)';
+          hint.style.color = '#fff';
+          hint.style.pointerEvents = 'none';
+          this.hint = hint;
+          this.state.view.graph.container.appendChild(hint);
+        }
+
+        if (this.index === mxEvent.ROTATION_HANDLE) {
+          const deg = Math.round((this.currentAlpha || 0) * 10) / 10;
+          this.hint.innerHTML = deg + '&deg;';
+        } else {
+          const s = this.state.view.scale;
+          const w = this.roundLength(this.bounds.width / s);
+          const h = this.roundLength(this.bounds.height / s);
+          this.hint.innerHTML = w + ' x ' + h;
+        }
+
+        const rot = (this.currentAlpha != null) ? this.currentAlpha : (this.state.style[mxConstants.STYLE_ROTATION] || 0);
+        const bb = mxUtils.getBoundingBox(this.bounds, rot) || this.bounds;
+        const offset = 16;
+        this.hint.style.left = (bb.x + Math.round((bb.width - this.hint.clientWidth) / 2)) + 'px';
+        this.hint.style.top = (bb.y + bb.height + offset) + 'px';
+      }
+    };
+
+    /**
+     * 结束手势时移除提示文本
+     * @returns {void}
+     */
+    const origRemoveHint = mxGraphHandler.prototype.removeHint;
+    mxGraphHandler.prototype.removeHint = function () {
+      origRemoveHint.apply(this, arguments);
+      try {
+        if (this.hint && this.hint.parentNode) this.hint.parentNode.removeChild(this.hint);
+      } catch (e) {}
+      this.hint = null;
+    };
+
+    /**
+     * 顶点处理器结束时移除提示文本
+     * @returns {void}
+     */
+    mxVertexHandler.prototype.removeHint = function () {
+      mxGraphHandler.prototype.removeHint.apply(this, arguments);
+      try {
+        if (this.hint && this.hint.parentNode) this.hint.parentNode.removeChild(this.hint);
+      } catch (e) {}
+      this.hint = null;
+    };
   }
 
   setupRotation(mx);
