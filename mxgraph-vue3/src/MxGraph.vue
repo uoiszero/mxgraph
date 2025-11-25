@@ -46,6 +46,112 @@ function initMx() {
     mxResourceExtension: ".txt"
   });
   registerCustomShapes(mx);
+
+  /**
+   * 启用并配置旋转控制点，位置与图标对齐 Grapheditor 示例
+   * @param {any} mxns mx 命名空间对象
+   * @returns {void}
+   */
+  function setupRotation(mxns) {
+    const { mxVertexHandler, mxGraphHandler, mxEvent, mxPoint, mxImage, mxUtils, mxConstants } = mxns;
+
+    // 旋转与实时预览能力
+    mxVertexHandler.prototype.rotationEnabled = true;
+    mxVertexHandler.prototype.manageSizers = true;
+    mxVertexHandler.prototype.livePreview = true;
+    mxGraphHandler.prototype.maxLivePreview = 16;
+
+    // 手柄位置（右上角），与 Grapheditor 保持一致
+    mxVertexHandler.prototype.rotationHandleVSpacing = -12;
+
+    /**
+     * 计算旋转手柄位置（右上角偏移）
+     * @returns {any}
+     */
+    mxVertexHandler.prototype.getRotationHandlePosition = function () {
+      const padding = this.getHandlePadding();
+      return new mxPoint(
+        this.bounds.x + this.bounds.width - this.rotationHandleVSpacing + padding.x / 2,
+        this.bounds.y + this.rotationHandleVSpacing - padding.y / 2
+      );
+    };
+
+    // 使用与示例一致的旋转图标（SVG dataURI，不依赖外部资源）
+    const rotationSvg =
+      'data:image/svg+xml;utf8,' +
+      encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">' +
+          '<path stroke="#007bff" fill="#007bff" d="M15.55 5.55L11 1v3.07C7.06 4.56 4 7.92 4 12s3.05 7.44 7 7.93v-2.02c-2.84-.48-5-2.94-5-5.91s2.16-5.43 5-5.91V10l4.55-4.45zM19.93 11c-.17-1.39-.72-2.73-1.62-3.89l-1.42 1.42c.54.75.88 1.6 1.02 2.47h2.02zM13 17.9v2.02c1.39-.17 2.74-.71 3.9-1.61l-1.44-1.44c-.75.54-1.59.89-2.46 1.03zm3.89-2.42l1.42 1.41c.9-1.16 1.45-2.5 1.62-3.89h-2.02c-.14.87-.48 1.72-1.02 2.48z"/>' +
+        '</svg>'
+      );
+    const rotationHandleImg = new mxImage(rotationSvg, 16, 16);
+
+    const origCreateSizerShape = mxVertexHandler.prototype.createSizerShape;
+
+    /**
+     * 创建控制点图形：为旋转手柄设置自定义图标
+     * @param {any} bounds
+     * @param {number} index
+     * @param {string} fillColor
+     * @returns {any}
+     */
+    mxVertexHandler.prototype.createSizerShape = function (bounds, index, fillColor) {
+      if (index === mxEvent.ROTATION_HANDLE) {
+        this.handleImage = rotationHandleImg;
+      }
+      return origCreateSizerShape.apply(this, arguments);
+    };
+
+    /**
+     * 单击旋转手柄时：按 90° 递增旋转（与 Grapheditor 行为保持一致）
+     * @returns {void}
+     */
+    mxVertexHandler.prototype.rotateClick = function () {
+      const stroke = mxUtils.getValue(this.state.style, mxConstants.STYLE_STROKECOLOR, mxConstants.NONE);
+      const fill = mxUtils.getValue(this.state.style, mxConstants.STYLE_FILLCOLOR, mxConstants.NONE);
+
+      if (this.state.view.graph.model.isVertex(this.state.cell) && stroke === mxConstants.NONE && fill === mxConstants.NONE) {
+        const angle = mxUtils.mod(mxUtils.getValue(this.state.style, mxConstants.STYLE_ROTATION, 0) + 90, 360);
+        this.state.view.graph.setCellStyles(mxConstants.STYLE_ROTATION, angle, [this.state.cell]);
+      } else {
+        this.state.view.graph.turnShapes([this.state.cell]);
+      }
+    };
+
+    const origMouseMove = mxVertexHandler.prototype.mouseMove;
+
+    /**
+     * 拖拽时隐藏旋转手柄，避免遮挡
+     * @param {any} sender
+     * @param {any} me
+     * @returns {void}
+     */
+    mxVertexHandler.prototype.mouseMove = function (sender, me) {
+      origMouseMove.apply(this, arguments);
+      if (this.graph.graphHandler.first != null) {
+        if (this.rotationShape != null && this.rotationShape.node != null) {
+          this.rotationShape.node.style.display = 'none';
+        }
+      }
+    };
+
+    const origMouseUp = mxVertexHandler.prototype.mouseUp;
+
+    /**
+     * 手势结束时仅在单选顶点时显示旋转手柄
+     * @param {any} sender
+     * @param {any} me
+     * @returns {void}
+     */
+    mxVertexHandler.prototype.mouseUp = function (sender, me) {
+      origMouseUp.apply(this, arguments);
+      if (this.rotationShape != null && this.rotationShape.node != null) {
+        this.rotationShape.node.style.display = this.graph.getSelectionCount() === 1 ? '' : 'none';
+      }
+    };
+  }
+
+  setupRotation(mx);
 }
 
 /**
