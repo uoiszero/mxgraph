@@ -60,6 +60,7 @@ function initMx() {
     mxVertexHandler.prototype.manageSizers = true;
     mxVertexHandler.prototype.livePreview = true;
     mxGraphHandler.prototype.maxLivePreview = 16;
+    mxVertexHandler.prototype.movePreviewToFront = true;
 
     // 手柄位置（右上角），与 Grapheditor 保持一致
     mxVertexHandler.prototype.rotationHandleVSpacing = -12;
@@ -147,6 +148,52 @@ function initMx() {
       origMouseUp.apply(this, arguments);
       if (this.rotationShape != null && this.rotationShape.node != null) {
         this.rotationShape.node.style.display = this.graph.getSelectionCount() === 1 ? '' : 'none';
+      }
+    };
+
+    /**
+     * 旋转拖动时的实时伪图形预览：在拖动中临时应用角度并重绘
+     * @param {any} me 鼠标事件
+     * @returns {void}
+     */
+    mxVertexHandler.prototype.rotateVertex = function (me) {
+      const point = new mxPoint(me.getGraphX(), me.getGraphY());
+      const dx = this.state.x + this.state.width / 2 - point.x;
+      const dy = this.state.y + this.state.height / 2 - point.y;
+      this.currentAlpha = (dx != 0) ? Math.atan(dy / dx) * 180 / Math.PI + 90 : ((dy < 0) ? 180 : 0);
+
+      if (dx > 0) {
+        this.currentAlpha -= 180;
+      }
+
+      this.currentAlpha -= this.startAngle;
+
+      if (this.rotationRaster && this.graph.isGridEnabledEvent(me.getEvent())) {
+        const dx2 = point.x - this.state.getCenterX();
+        const dy2 = point.y - this.state.getCenterY();
+        const dist = Math.sqrt(dx2 * dx2 + dy2 * dy2);
+        let raster = 1;
+        if (dist - this.startDist < 2) {
+          raster = 15;
+        } else if (dist - this.startDist < 25) {
+          raster = 5;
+        }
+        this.currentAlpha = Math.round(this.currentAlpha / raster) * raster;
+      } else {
+        this.currentAlpha = this.roundAngle(this.currentAlpha);
+      }
+
+      this.selectionBorder.rotation = this.currentAlpha;
+      this.selectionBorder.redraw();
+
+      const prev = this.state.style[mxConstants.STYLE_ROTATION] || 0;
+      const angle = this.currentAlpha != null ? this.currentAlpha : prev;
+      this.state.style[mxConstants.STYLE_ROTATION] = angle;
+      this.updateLivePreview(me);
+      this.state.style[mxConstants.STYLE_ROTATION] = prev;
+
+      if (this.livePreviewActive) {
+        this.redrawHandles();
       }
     };
   }
