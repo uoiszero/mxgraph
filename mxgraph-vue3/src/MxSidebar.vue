@@ -373,64 +373,31 @@ export default {
 
         const createEdge = (graphTarget, evt) => {
           const pt = graphTarget.getPointForEvent(evt);
-          const parentTarget = graphTarget.getDefaultParent();
           // 规范化样式（与缩略图一致），确保 flexArrow 默认显式宽度
           let edgeStyle2 = style || "edgeStyle=orthogonalEdgeStyle;rounded=0;";
           if (edgeStyle2.indexOf("shape=flexArrow") !== -1) {
-            if (edgeStyle2.indexOf("noEdgeStyle=") === -1) {
-              edgeStyle2 += "noEdgeStyle=1;";
-            }
-            if (edgeStyle2.indexOf("width=") === -1) {
-              edgeStyle2 += "width=14;";
-            }
+            if (edgeStyle2.indexOf("noEdgeStyle=") === -1) edgeStyle2 += "noEdgeStyle=1;";
+            if (edgeStyle2.indexOf("width=") === -1) edgeStyle2 += "width=14;";
           }
-          const pStyle = "shape=point;fillColor=none;strokeColor=none;";
-          const model = graphTarget.getModel();
-          model.beginUpdate();
-          let e;
+          const tmpl = new mxCell("", new mxGeometry(0, 0, 50, 50), edgeStyle2);
+          tmpl.geometry.setTerminalPoint(new mxPoint(0, 50), true);
+          tmpl.geometry.setTerminalPoint(new mxPoint(50, 0), false);
+          tmpl.geometry.relative = true;
+          tmpl.edge = true;
+          let select = null;
+          graphTarget.getModel().beginUpdate();
           try {
-            const s = graphTarget.insertVertex(
-              parentTarget,
-              null,
-              "",
-              pt.x - 48,
-              pt.y,
-              1,
-              1,
-              pStyle
-            );
-            const t = graphTarget.insertVertex(
-              parentTarget,
-              null,
-              "",
-              pt.x + 48,
-              pt.y,
-              1,
-              1,
-              pStyle
-            );
-            e = graphTarget.insertEdge(
-              parentTarget,
-              null,
-              "",
-              s,
-              t,
-              edgeStyle2
-            );
-            // 预置两个 waypoint，立即可见并可拖动
-            const geo =
-              e.geometry != null ? e.geometry.clone() : new mxGeometry();
-            geo.points = [
-              new mxPoint(pt.x, pt.y - 24),
-              new mxPoint(pt.x, pt.y + 24)
-            ];
-            model.setGeometry(e, geo);
+            select = graphTarget.importCells([tmpl], pt.x, pt.y, null);
           } finally {
-            model.endUpdate();
+            graphTarget.getModel().endUpdate();
           }
-          graphTarget.setSelectionCell(e);
-          graphTarget.scrollCellToVisible(e);
-          graphTarget.refresh();
+          if (select && select.length) {
+            graphTarget.setSelectionCells(select);
+            graphTarget.scrollCellToVisible(select[0]);
+            graphTarget.refresh();
+          }
+          graphTarget.stopEditing();
+          try { mxLocal.value?.mxEvent?.consume?.(evt); } catch (e) {}
         };
         const bindEdge = () => {
           const gr = getActiveGraph();
@@ -494,27 +461,27 @@ export default {
 
         const createEdge = (graphTarget, evt) => {
           const pt = graphTarget.getPointForEvent(evt);
-          const parentTarget = graphTarget.getDefaultParent();
           let edgeStyle2 = style || "edgeStyle=orthogonalEdgeStyle;rounded=0;";
           if (edgeStyle2.indexOf("shape=flexArrow") !== -1) {
             if (edgeStyle2.indexOf("noEdgeStyle=") === -1) edgeStyle2 += "noEdgeStyle=1;";
             if (edgeStyle2.indexOf("width=") === -1) edgeStyle2 += "width=14;";
           }
-          const pStyle = "shape=point;fillColor=none;strokeColor=none;";
-          const model = graphTarget.getModel();
-          model.beginUpdate();
-          let e;
-          try {
-            const s = graphTarget.insertVertex(parentTarget, null, "", pt.x - 48, pt.y, 1, 1, pStyle);
-            const t = graphTarget.insertVertex(parentTarget, null, "", pt.x + 48, pt.y, 1, 1, pStyle);
-            e = graphTarget.insertEdge(parentTarget, null, "", s, t, edgeStyle2);
-            const geo = e.geometry != null ? e.geometry.clone() : new mxGeometry();
-            geo.points = [new mxPoint(pt.x, pt.y - 24), new mxPoint(pt.x, pt.y + 24)];
-            model.setGeometry(e, geo);
-          } finally { model.endUpdate(); }
-          graphTarget.setSelectionCell(e);
-          graphTarget.scrollCellToVisible(e);
-          graphTarget.refresh();
+          const tmpl = new mxCell("", new mxGeometry(0, 0, 50, 50), edgeStyle2);
+          tmpl.geometry.setTerminalPoint(new mxPoint(0, 50), true);
+          tmpl.geometry.setTerminalPoint(new mxPoint(50, 0), false);
+          tmpl.geometry.relative = true;
+          tmpl.edge = true;
+          let select = null;
+          graphTarget.getModel().beginUpdate();
+          try { select = graphTarget.importCells([tmpl], pt.x, pt.y, null); }
+          finally { graphTarget.getModel().endUpdate(); }
+          if (select && select.length) {
+            graphTarget.setSelectionCells(select);
+            graphTarget.scrollCellToVisible(select[0]);
+            graphTarget.refresh();
+          }
+          graphTarget.stopEditing();
+          try { mxLocal.value?.mxEvent?.consume?.(evt); } catch (e) {}
         };
         const bindEdge = () => {
           const gr = getActiveGraph();
